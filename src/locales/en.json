@@ -1,0 +1,830 @@
+{
+  "meta": {
+    "title": "TutorBridge Ethiopia — The Right Teacher. The Right Trainer. A Brighter Future.",
+    "description": "Connect with verified private tutors and corporate trainers across Addis Ababa and Ethiopia for academic tutoring, languages, practical skills, and organizational training."
+  },
+  "brand": {
+    "name": "TutorBridge Ethiopia",
+    "tagline": "The Right Teacher. The Right Trainer. A Brighter Future."
+  },
+  "nav": {
+    "findTutor": "Find a Tutor",
+    "requestMatch": "Request Match",
+    "corporate": "Corporate",
+    "becomeTutor": "Teach & Train",
+    "howItWorks": "How It Works",
+    "signIn": "Sign In",
+    "dashboard": "My Dashboard",
+    "toggleMenu": "Toggle Menu",
+    "langEn": "EN",
+    "langAm": "አማ",
+    "langEnglishFull": "English",
+    "langAmharicFull": "አማርኛ"
+  },
+  "common": {
+    "verifiedEducator": "Verified Educator",
+    "verified": "Verified",
+    "newLabel": "New",
+    "perHourEtb": "ETB / hr",
+    "etb": "ETB",
+    "yearsShort": "yrs exp",
+    "yearsFull": "years",
+    "viewProfile": "View Profile",
+    "close": "Close",
+    "cancel": "Cancel",
+    "signIn": "Sign In",
+    "addisAbaba": "Addis Ababa",
+    "all": "All",
+    "divisions": {
+      "Academic Tutoring": "Academic Tutoring",
+      "Languages & Personal Development": "Languages & Personal Development",
+      "Professional & Practical Skills": "Professional & Practical Skills",
+      "Corporate & Organizational Training": "Corporate & Organizational Training"
+    },
+    "subCities": {
+      "Bole": "Bole",
+      "Yeka": "Yeka",
+      "Kirkos": "Kirkos",
+      "Arada": "Arada",
+      "Lideta": "Lideta",
+      "Nifas Silk-Lafto": "Nifas Silk-Lafto",
+      "Kolfe Keranio": "Kolfe Keranio",
+      "Gulele": "Gulele",
+      "Akaki Kality": "Akaki Kality",
+      "Lemi Kura": "Lemi Kura",
+      "Addis Ketema": "Addis Ketema"
+    },
+    "grades": {
+      "Kindergarten": "Kindergarten",
+      "Primary (Grades 1–6)": "Primary (Grades 1–6)",
+      "Middle (Grades 7–8)": "Middle (Grades 7–8)",
+      "Secondary (Grades 9–12)": "Secondary (Grades 9–12)",
+      "National Exam Prep (Grade 12)": "National Exam Prep (Grade 12)",
+      "University Level": "University Level",
+      "Adult / Professional": "Adult / Professional"
+    },
+    "days": {
+      "Monday": "Monday",
+      "Tuesday": "Tuesday",
+      "Wednesday": "Wednesday",
+      "Thursday": "Thursday",
+      "Friday": "Friday",
+      "Saturday": "Saturday",
+      "Sunday": "Sunday"
+    },
+    "languages": {
+      "Amharic": "Amharic",
+      "English": "English",
+      "Afaan Oromo": "Afaan Oromo",
+      "Tigrigna": "Tigrigna",
+      "French": "French"
+    },
+    "orgTypes": {
+      "Private Company": "Private Company",
+      "NGO": "NGO",
+      "Government Institution": "Government Institution",
+      "School / University": "School / University",
+      "Development Organization": "Development Organization",
+      "SME": "SME",
+      "Other": "Other"
+    },
+    "corporateDurations": {
+      "One day": "One day",
+      "Two to three days": "Two to three days",
+      "One week": "One week",
+      "Several weeks": "Several weeks",
+      "Monthly / Customized": "Monthly / Customized"
+    },
+    "subjects": {
+      "Mathematics": "Mathematics",
+      "Physics": "Physics",
+      "Chemistry": "Chemistry",
+      "Biology": "Biology",
+      "National Exam Prep": "National Exam Prep",
+      "English": "English",
+      "Amharic": "Amharic",
+      "Afaan Oromo": "Afaan Oromo",
+      "Public Speaking": "Public Speaking",
+      "Communication": "Communication",
+      "Communication Skills": "Communication Skills",
+      "Study Skills": "Study Skills",
+      "Programming": "Programming",
+      "Web Development": "Web Development",
+      "Computer Fundamentals": "Computer Fundamentals",
+      "Microsoft Office": "Microsoft Office",
+      "Kindergarten": "Kindergarten",
+      "Primary Mathematics": "Primary Mathematics",
+      "Graphic Design": "Graphic Design",
+      "Video Editing": "Video Editing",
+      "Accounting": "Accounting",
+      "Music": "Music",
+      "Exam Prep": "Exam Prep",
+      "Digital Literacy": "Digital Literacy",
+      "Information Technology": "Information Technology",
+      "Marketing & Business": "Marketing & Business",
+      "Leadership": "Leadership",
+      "Creative Tech": "Creative Tech"
+    },
+    "seedTutors": {
+      "seed_tutor_dawit": {
+        "headline": "M.Sc. Physics & Senior Mathematics Educator",
+        "bio": "Eight years preparing Addis Ababa secondary students for Grade 12 national examinations and university entrance mathematics and physics. Focuses on step-by-step problem solving and exam confidence.",
+        "qualifications": "M.Sc. in Applied Physics, Addis Ababa University; Certified Secondary Teacher"
+      },
+      "seed_tutor_mekdes": {
+        "headline": "Bilingual English, Amharic & Academic Writing Specialist",
+        "bio": "Experienced language instructor helping international-school learners, local primary students, and adult professionals strengthen reading comprehension, public speaking, and academic writing.",
+        "qualifications": "M.A. in Teaching English as a Foreign Language (TEFL), Addis Ababa University"
+      },
+      "seed_tutor_yohannes": {
+        "headline": "Software Engineering & Practical Digital Skills Instructor",
+        "bio": "Full-stack software engineer teaching Python programming, web development, Microsoft Office, and graphic design fundamentals through hands-on local project portfolios.",
+        "qualifications": "B.Sc. in Computer Science, Addis Ababa Institute of Technology (AAiT)"
+      },
+      "seed_tutor_selamawit": {
+        "headline": "Kindergarten & Primary Foundational Numeracy & Literacy Mentor",
+        "bio": "Patient early-childhood and primary education specialist supporting Grades 1–6 students with foundational mathematics, science curiosity, study habits, and homework structure.",
+        "qualifications": "B.Ed. in Primary Education & Child Development, Kotebe University of Education"
+      }
+    }
+  },
+  "home": {
+    "heroKicker": "Addis Ababa & Nationwide Ethiopia · Individuals, Families & Organizations",
+    "heroHeadline": "The Right Teacher. The Right Trainer. A Brighter Future.",
+    "heroSubhead": "Connect individuals, families, and organizations across Ethiopia with credential-verified academic tutors, practical skills instructors, and corporate trainers.",
+    "heroPrimaryCta": "Find a Tutor",
+    "heroSecondaryCta": "Corporate Training",
+    "heroImgAlt": "Verified Ethiopian tutor guiding a secondary school student in Addis Ababa",
+    "heroFallbackTitle": "Verified In-Person Tutoring",
+    "heroFallbackSub": "Addis Ababa & Nationwide Ethiopia",
+    "searchPlaceholder": "Subject or skill (e.g., Mathematics, English, Python)",
+    "searchSubCityAll": "All Sub-Cities",
+    "searchDivisionAll": "All Divisions",
+    "searchSubmit": "Search Tutors",
+    "stats": [
+      {
+        "value": "4 Divisions",
+        "title": "Individual & Corporate",
+        "desc": "From KG–12 academic tutoring to customized organizational staff training."
+      },
+      {
+        "value": "11 Sub-Cities",
+        "title": "Addis Ababa Coverage",
+        "desc": "In-person home tutoring and on-site organizational workshops across Ethiopia."
+      },
+      {
+        "value": "100% Vetted",
+        "title": "Verified Credentials",
+        "desc": "National ID, academic degrees, and subject competency checked before approval."
+      },
+      {
+        "value": "Safeguarded",
+        "title": "Transparent Billing",
+        "desc": "Itemized corporate quotations and verified Telebirr, CBE Birr & bank payouts."
+      }
+    ],
+    "divisionsTitle": "Four Divisions of Learning & Organizational Capacity",
+    "divisionsLead": "Personalized in-person tutoring for students alongside customized short-term and long-term training programs for Ethiopian organizations.",
+    "divisions": [
+      {
+        "index": "01.",
+        "divisionKey": "Academic Tutoring",
+        "title": "Academic Tutoring",
+        "summary": "Structured support from Kindergarten through Grade 12 national examination prep and university courses.",
+        "subjects": ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Amharic", "Exam Prep"],
+        "cta": "Explore Academic"
+      },
+      {
+        "index": "02.",
+        "divisionKey": "Languages & Personal Development",
+        "title": "Languages & Personal Development",
+        "summary": "Fluency, academic writing, public speaking, and disciplined study habits for learners of all ages.",
+        "subjects": ["English", "Amharic", "Afaan Oromo", "Public Speaking", "Communication", "Study Skills"],
+        "cta": "Explore Languages"
+      },
+      {
+        "index": "03.",
+        "divisionKey": "Professional & Practical Skills",
+        "title": "Professional & Practical Skills",
+        "summary": "Career-ready in-person coaching in software, office productivity, design, finance, and music.",
+        "subjects": ["Programming", "Web Development", "Graphic Design", "Video Editing", "Accounting", "Music"],
+        "cta": "Explore Professional"
+      },
+      {
+        "index": "04.",
+        "divisionKey": "Corporate & Organizational Training",
+        "title": "Corporate & Organizational Training",
+        "summary": "Customized short-term and multi-week staff capacity-building programs for companies, NGOs, government institutions, schools, and SMEs.",
+        "subjects": ["Digital Literacy", "Information Technology", "Marketing & Business", "Leadership", "Creative Tech"],
+        "cta": "Explore Corporate Training"
+      }
+    ],
+    "subjectsSection": {
+      "kicker": "Subjects & Practical Skills Directory",
+      "title": "Comprehensive Subjects & Skills Taught Across Ethiopia",
+      "lead": "Explore what learners, parents, and institutions can study with verified TutorBridge educators—both one-on-one in person and in structured team cohorts.",
+      "browseCta": "Browse Tutors in This Area",
+      "corporateCta": "View Corporate Tracks",
+      "categories": [
+        {
+          "code": "01.",
+          "name": "Academic Subjects (KG – University)",
+          "divisionKey": "Academic Tutoring",
+          "description": "Aligned with Ethiopian national and international curricula, covering Kindergarten foundations, primary numeracy and literacy, middle school sciences, Grade 9–12 STEM, Grade 12 national exam preparation, and undergraduate university coursework.",
+          "items": ["Mathematics & Applied Calculus", "Physics & Chemistry", "Biology & General Science", "Grade 12 National Exam Prep", "Primary Reading & Homework Support", "Economics & Geography"]
+        },
+        {
+          "code": "02.",
+          "name": "Languages & Personal Development",
+          "divisionKey": "Languages & Personal Development",
+          "description": "Build confident bilingual communication, academic essay writing, reading fluency, public speaking, and structured study discipline for school students, university applicants, and working adults.",
+          "items": ["English Fluency & Academic Writing", "Amharic Literacy & Composition", "Afaan Oromo Communication", "Public Speaking & Presentation", "Critical Thinking & Study Habits", "Executive Business Communication"]
+        },
+        {
+          "code": "03.",
+          "name": "Computer, IT & Digital Productivity",
+          "divisionKey": "Professional & Practical Skills",
+          "description": "Hands-on technical coaching led by practicing Ethiopian engineers and certified instructors, helping learners and teams move from basic computer literacy to software engineering and cloud administration.",
+          "items": ["Computer Fundamentals & Internet", "Microsoft Office & Advanced Excel", "Python, JavaScript & Web Development", "Database & SQL Fundamentals", "IT Support & Networking", "Cybersecurity & Cloud Productivity"]
+        },
+        {
+          "code": "04.",
+          "name": "Creative Media, Business & Music",
+          "divisionKey": "Professional & Practical Skills",
+          "description": "Project-based mentorship in visual design, multimedia production, entrepreneurship, accounting principles, and creative arts tailored to Ethiopia's growing creative and commercial sectors.",
+          "items": ["Graphic Design & Brand Identity", "Video Editing & Motion Graphics", "Photography & Digital Content", "Accounting & Bookkeeping Basics", "Digital Marketing & Sales Strategy", "Instrumental Music & Vocal Practice"]
+        }
+      ]
+    },
+    "aboutUs": {
+      "kicker": "About TutorBridge Ethiopia",
+      "title": "Bridging Ethiopian Families, Learners & Organizations with Vetted Educators",
+      "intro": "TutorBridge Ethiopia is a managed hybrid tutoring marketplace and organizational training coordination platform founded in Addis Ababa. We simplify how families find trustworthy private teachers and how organizations deliver high-impact workforce capacity building.",
+      "storyTitle": "Our Story & Why TutorBridge Exists",
+      "storyBody": "Across Ethiopia, parents often rely on unverified word-of-mouth referrals when seeking home tutors, while qualified teachers struggle to find steady, fairly compensated students. At the same time, companies, NGOs, and institutions frequently lack a single dependable partner to source, screen, contract, and track specialized local trainers. TutorBridge was built to solve all three gaps under one trusted intermediary—verifying identity and academic credentials, protecting learner safety, and managing transparent Telebirr, CBE Birr, and bank-verified payments.",
+      "missionLabel": "Our Mission",
+      "missionBody": "To simplify finding, verifying, and booking qualified tutors and professional trainers while creating dignified, transparent income opportunities for Ethiopian educators.",
+      "visionLabel": "Our Vision",
+      "visionBody": "To become Ethiopia's most trusted education and workforce training bridge—connecting every learner and institution with the right educator nationwide.",
+      "valuesTitle": "Core Values & Institutional Objectives",
+      "values": [
+        {
+          "title": "Rigorous Verification",
+          "desc": "Every educator undergoes National/Kebele ID checks, degree verification, and competency screening before listing."
+        },
+        {
+          "title": "Child & Learner Safeguarding",
+          "desc": "Minor profiles require guardian consent, approved physical locations, and structured parent visibility on every session."
+        },
+        {
+          "title": "Managed Privacy & Fair Economics",
+          "desc": "All communication and agreements stay protected inside TutorBridge with an explicit 15% tutoring service fee and itemized corporate quotes."
+        },
+        {
+          "title": "Measurable Learning Outcomes",
+          "desc": "Weekly session logs, attendance tracking, and completion reports ensure families and organizations see real academic and skill progress."
+        }
+      ],
+      "objectives": [
+        "Deliver dependable KG–12, university, and exam-prep tutoring across all 11 Addis Ababa sub-cities and expanding regional hubs.",
+        "Equip youth and professionals with practical digital, language, creative, and business competencies.",
+        "Enable private firms, NGOs, schools, and public institutions to run compliant, contract-backed staff training programs."
+      ]
+    },
+    "corporateSpotlight": {
+      "kicker": "Division 4 · Corporate & Organizational Training",
+      "title": "Customized Staff Training for Ethiopian Companies, NGOs & Institutions",
+      "desc": "Source vetted professional trainers for Digital Literacy, IT & Cybersecurity, Marketing & Sales, Leadership & Project Management, and Creative Media—delivered at your premises or selected venue from one-day intensives to multi-week programs.",
+      "bullets": [
+        "Transparent itemized quotations (trainer pay, logistics, service fee)",
+        "Trainer qualification screening, scheduling & attendance logs",
+        "Dedicated Organization Dashboard for invoices, rosters & completion reports"
+      ],
+      "primaryCta": "Explore Corporate Training",
+      "secondaryCta": "Apply as Corporate Trainer",
+      "imgAlt": "Ethiopian corporate trainer leading a workshop in Addis Ababa"
+    },
+    "featuredTutorsTitle": "Verified Educators Ready to Teach",
+    "featuredTutorsLead": "Every public profile has completed identity checks, credential verification, and our safeguarding pledge.",
+    "viewAllTutors": "Browse All Tutors",
+    "howItWorksTitle": "How TutorBridge Works",
+    "howItWorksLead": "Choose direct self-service booking or personalized matching—backed by end-to-end verification, safeguarding, and transparent ETB payments.",
+    "methodA": {
+      "kicker": "Method A · Self-Service Marketplace",
+      "title": "Browse, Compare & Book Directly",
+      "steps": [
+        "Filter verified tutors by subject, grade level, Addis Ababa sub-city, and ETB hourly rate.",
+        "Review qualifications, experience, availability days, and parent reviews.",
+        "Submit a booking request for your child and receive tutor confirmation.",
+        "Complete payment via Telebirr, CBE Birr, or bank transfer and track weekly progress notes."
+      ],
+      "cta": "Browse Verified Tutors"
+    },
+    "methodB": {
+      "kicker": "Method B · Managed Tutor & Corporate Matching",
+      "title": "Tell Us Your Needs — We Match for You",
+      "steps": [
+        "Families or organizations submit learning objectives, location, schedule, and budget range.",
+        "Our coordination team screens qualified educators or corporate trainers matching your goals.",
+        "Review recommended candidates and itemized quotations directly inside your dashboard.",
+        "Approve the match and track monitored attendance and completion reports."
+      ],
+      "familyCta": "Family Matching",
+      "corporateCta": "Corporate Request"
+    },
+    "roleGuides": {
+      "title": "Step-by-Step Experience by Role",
+      "roles": [
+        {
+          "label": "For Parents & Students",
+          "summary": "Create student profiles with guardian consent, select tutors directly or request managed matching, communicate safely inside the platform, verify Telebirr/CBE Birr payments, and read weekly session progress notes."
+        },
+        {
+          "label": "For Individual Tutors",
+          "summary": "Submit National ID and university degrees once, receive administrator verification, accept family bookings that fit your sub-cities and schedule, log attendance and progress, and receive 85% net payouts."
+        },
+        {
+          "label": "For Corporate Trainers",
+          "summary": "Showcase approved workshop portfolios and training methodology, receive vetted institutional invitations from TutorBridge, confirm daily terms via managed assignment agreements, and log participant attendance."
+        }
+      ],
+      "pillarsTitle": "Verification, Booking & Payment Assurance",
+      "pillars": [
+        {
+          "title": "1. Educator & Trainer Verification",
+          "body": "Applicants upload National/Kebele ID and degree or certification references. TutorBridge administrators verify identity, qualifications, subject mastery, and safeguarding compliance before any profile goes public."
+        },
+        {
+          "title": "2. Protected Booking & Matching",
+          "body": "Personal phone numbers and residential addresses are never publicly exposed. All inquiries, candidate proposals, schedules, and contracts are coordinated through TutorBridge for privacy and accountability."
+        },
+        {
+          "title": "3. Telebirr, CBE Birr & Bank Verification",
+          "body": "Clients pay only after availability or proposal approval by submitting their Telebirr, CBE Birr, or bank transfer reference inside the dashboard. TutorBridge verifies settlement and issues official receipts."
+        }
+      ]
+    },
+    "whyChoose": {
+      "kicker": "Why Choose TutorBridge Ethiopia",
+      "title": "Built for Trust, Safety, and Measurable Academic & Career Growth",
+      "lead": "Unlike informal social-media referrals or unvetted directories, TutorBridge manages every stage of quality assurance, privacy, and financial accountability.",
+      "items": [
+        {
+          "title": "ID & Credential Screening",
+          "desc": "No unverified listings. Every tutor and corporate trainer is manually reviewed against academic degrees and national identification."
+        },
+        {
+          "title": "Contact Protection & Privacy",
+          "desc": "Private phone numbers, emails, and student records are strictly protected—preventing unauthorized contact sharing or off-platform risk."
+        },
+        {
+          "title": "Transparent ETB Pricing",
+          "desc": "Clear hourly tutor rates and itemized corporate quotations in Ethiopian Birr with zero hidden charges."
+        },
+        {
+          "title": "Dedicated Addis Ababa Coordination",
+          "desc": "Real local human support for rescheduling, safeguarding concerns, teacher replacements, and organizational reporting."
+        }
+      ]
+    },
+    "testimonialsTitle": "Trusted by Families Across Addis Ababa",
+    "testimonials": [
+      {
+        "quote": "Within two months of twice-weekly physics sessions in Bole, our son moved from struggling on mock tests to scoring 88% on his Grade 12 preparatory exam.",
+        "name": "Rahel Tesfaye",
+        "role": "Parent of Grade 12 Student",
+        "location": "Bole, Addis Ababa"
+      },
+      {
+        "quote": "We used Managed Matching because we needed an Amharic-and-English speaking primary tutor near Old Airport. TutorBridge verified her degree and sent us weekly progress notes.",
+        "name": "Dr. Bereket Haile",
+        "role": "Parent of Grade 4 Student",
+        "location": "Nifas Silk-Lafto, Addis Ababa"
+      },
+      {
+        "quote": "Having transparent 15% commission and confirmed Telebirr payments lets me focus entirely on preparing quality lessons for my students across Yeka and Arada.",
+        "name": "Dawit Tadesse",
+        "role": "Verified Physics & Math Educator",
+        "location": "Yeka, Addis Ababa"
+      }
+    ],
+    "becomeTutorKicker": "For Educators & Professional Corporate Trainers",
+    "becomeTutorBannerTitle": "Share your knowledge. Teach students or train organizations.",
+    "becomeTutorBannerSub": "Join verified teachers, university lecturers, and corporate trainers. Transparent ETB rates and Telebirr/CBE Birr payouts.",
+    "becomeTutorBannerCta": "Apply as Tutor or Trainer",
+    "faqTitle": "Frequently Asked Questions",
+    "faqs": [
+      {
+        "question": "How does TutorBridge verify tutors and corporate trainers?",
+        "answer": "Every individual tutor and corporate trainer submits a valid national ID, academic or professional qualifications, undergoes competency and experience verification, and receives administrator approval before taking assignments."
+      },
+      {
+        "question": "Can companies, NGOs, and government offices request customized staff training?",
+        "answer": "Yes. Through Division 4 (Corporate & Organizational Training), organizations can register an account, submit a training request across Digital Literacy, IT, Marketing & Business, Leadership, or Creative Tech, and receive customized trainer proposals and itemized quotations."
+      },
+      {
+        "question": "How do itemized corporate quotations work?",
+        "answer": "Every corporate quotation transparently breaks down trainer compensation, logistical expenses, and TutorBridge service fees based on program duration, participant numbers, subject complexity, and venue."
+      },
+      {
+        "question": "How do Telebirr, CBE Birr, and Bank Transfer payments work?",
+        "answer": "For both individual tutoring bookings and corporate training invoices, you submit your Telebirr, CBE Birr, or bank transfer reference inside your dashboard, and TutorBridge verifies the transaction and records receipts."
+      }
+    ],
+    "contact": {
+      "title": "Questions? Contact Our Addis Ababa Desk",
+      "subtitle": "Speak with our coordination team regarding private tutoring, corporate training quotations, or safeguarding.",
+      "namePlaceholder": "Your Full Name or Organization",
+      "phonePlaceholder": "Phone Number (+251 9...)",
+      "messagePlaceholder": "How can we help your family or organization?",
+      "submitBtn": "Send Inquiry",
+      "sentMsg": "Thank you. Our Addis Ababa coordination team has received your inquiry and will respond within one business day."
+    }
+  },
+  "findTutor": {
+    "title": "Find a Verified Tutor",
+    "showingPrefix": "Showing",
+    "showingSuffix": "approved educators in Addis Ababa and across Ethiopia.",
+    "managedCta": "Prefer Managed Matching? Request a Tutor",
+    "searchPlaceholder": "Search subject, skill, name, or degree...",
+    "allDivisions": "All Service Divisions",
+    "allSubCities": "All Sub-Cities",
+    "gradeLabel": "Grade / Level",
+    "allLevels": "All Levels",
+    "maxRateLabel": "Max Rate:",
+    "minExpLabel": "Min Experience:",
+    "verifiedOnly": "Verified Only",
+    "resetFilters": "Reset Filters",
+    "comparingPrefix": "Comparing:",
+    "compareBtn": "Compare Side-by-Side",
+    "clearBtn": "Clear",
+    "emptyTitle": "No tutors match those exact filters",
+    "emptyDesc": "Try widening your maximum ETB rate or sub-city, or submit a Managed Matching request so our coordination team can source a tutor for you.",
+    "emptyCta": "Submit Managed Matching Request",
+    "subjectsLabel": "Subjects:",
+    "qualificationsLabel": "Qualifications:",
+    "locationsLabel": "Locations:",
+    "experienceLabel": "Experience:",
+    "compareSelect": "Compare",
+    "compareSelected": "Selected",
+    "modalTitle": "Side-by-Side Tutor Comparison",
+    "modalRate": "Rate:",
+    "modalExperience": "Experience:",
+    "modalQualifications": "Qualifications:",
+    "modalSubjects": "Subjects:",
+    "modalLocations": "Locations:",
+    "modalAvailability": "Availability:",
+    "modalLanguages": "Languages:",
+    "modalCta": "Open Full Profile & Book",
+    "saveFavoriteAria": "Save favorite tutor"
+  },
+  "tutorProfile": {
+    "backToDirectory": "Back to Tutor Directory",
+    "verifiedBadge": "Verified Educator · ID & Credentials Checked",
+    "reviewsSuffix": "reviews",
+    "introHeading": "Professional Introduction",
+    "qualificationsHeading": "Educational Qualifications",
+    "yearsExpSuffix": "years of teaching experience",
+    "locationsHeading": "Preferred Teaching Locations",
+    "inPersonNote": "In-person at family-approved locations",
+    "availabilityHeading": "Weekly Availability",
+    "languagesHeading": "Instruction Languages",
+    "subjectsLevelsHeading": "Subjects & Academic Levels",
+    "divisionLabel": "Division:",
+    "subjectsLabel": "Subjects:",
+    "levelsLabel": "Levels:",
+    "reviewsHeading": "Parent & Student Reviews",
+    "noReviewsText": "Verified ratings collected through completed TutorBridge sessions. Leave a review after your first completed booking.",
+    "rateLabel": "Transparent Hourly Rate",
+    "requestBookingPrefix": "Request Booking with",
+    "messagePrefix": "Message",
+    "messageSuffix": "via TutorBridge",
+    "privacyNote": "Private phone numbers and national ID documents are safeguarded and never publicly shared.",
+    "paymentNotePrefix": "Pay only after",
+    "paymentNoteSuffix": "confirms availability. Supports Telebirr, CBE Birr, and bank transfer."
+  },
+  "requestMatching": {
+    "kicker": "Method B · Managed Tutor Matching",
+    "title": "Request Personalized Tutor Matching",
+    "subtitle": "Share your student’s learning needs, preferred Addis Ababa neighborhood, schedule, and budget. Our team will review your request and propose vetted tutor candidates.",
+    "successTitle": "Matching Request Received",
+    "successBodyPrefix": "Our coordination team is reviewing qualified educators in",
+    "successBodySuffix": "Track proposed candidates and approve your match inside your Parent Dashboard.",
+    "openDashboard": "Open My Parent Dashboard",
+    "signInBanner": "Sign in with Google so we can link this request to your family dashboard.",
+    "studentNameLabel": "Student / Learner Full Name",
+    "studentNamePlaceholder": "e.g., Lidya Solomon",
+    "gradeLabel": "Grade / Education Level",
+    "divisionLabel": "Service Division",
+    "subCityLabel": "Addis Ababa Sub-City",
+    "subjectsLabel": "Subjects or Skills Needed (comma-separated)",
+    "subjectsPlaceholder": "Mathematics, Physics, English Writing",
+    "scheduleLabel": "Preferred Schedule",
+    "defaultSchedule": "3 days per week after 4:00 PM",
+    "budgetLabel": "Max Hourly Budget (ETB)",
+    "notesLabel": "Learning Goals & Language Preferences",
+    "notesPlaceholder": "Share exam goals, preferred instruction language (Amharic / English), or specific support areas...",
+    "submitIdle": "Submit Matching Request",
+    "submitBusy": "Submitting Request..."
+  },
+  "corporate": {
+    "kicker": "Division 4 · Corporate & Organizational Training",
+    "title": "Practical Workforce Training Built for Ethiopian Organizations",
+    "subtitle": "TutorBridge coordinates vetted trainers, customized curricula, itemized quotations, attendance tracking, and completion reporting for private companies, NGOs, government institutions, schools, universities, and SMEs.",
+    "ctaSignedIn": "Open Organization Portal",
+    "ctaSignedOut": "Register Organization & Request Training",
+    "ctaApplyTrainer": "Apply as Corporate Trainer",
+    "imgAlt": "Corporate training workshop in Addis Ababa",
+    "orgsTitle": "Organizations We Serve",
+    "durationsTitle": "Flexible Program Durations",
+    "venuesTitle": "In-Person Delivery Venues",
+    "venuesBody": "At your organization’s premises, a selected training venue, or another agreed physical location in Addis Ababa or nationwide.",
+    "categoriesTitle": "Corporate Training Categories & Curricula",
+    "categoriesSubtitle": "Programs tailored to your participant count, departmental goals, and skill level.",
+    "categoryPrefix": "Category",
+    "specializedProgram": "Specialized Program",
+    "workflowTitle": "Coordinated Corporate Training Workflow",
+    "workflowSubtitle": "From training request and trainer sourcing to itemized quotations, attendance, and completion reporting.",
+    "workflowCta": "Submit Organization Training Request",
+    "categories": [
+      {
+        "code": "A",
+        "name": "Digital Literacy",
+        "topics": [
+          "Basic computer skills",
+          "Microsoft Office",
+          "Excel and data management",
+          "Internet and email",
+          "Digital communication",
+          "Online safety",
+          "Digital productivity"
+        ]
+      },
+      {
+        "code": "B",
+        "name": "Information Technology",
+        "topics": [
+          "IT support",
+          "Computer maintenance",
+          "Networking",
+          "Database fundamentals",
+          "Programming",
+          "Cloud computing",
+          "Cybersecurity awareness"
+        ]
+      },
+      {
+        "code": "C",
+        "name": "Marketing and Business",
+        "topics": [
+          "Digital marketing",
+          "Social media management",
+          "Branding",
+          "Sales",
+          "Customer service",
+          "Business development",
+          "Marketing strategy"
+        ]
+      },
+      {
+        "code": "D",
+        "name": "Professional Development",
+        "topics": [
+          "Leadership",
+          "Management",
+          "Teamwork",
+          "Communication",
+          "Project management",
+          "Time management",
+          "Public speaking"
+        ]
+      },
+      {
+        "code": "E",
+        "name": "Creative and Technical Skills",
+        "topics": [
+          "Graphic design",
+          "Video editing",
+          "Photography",
+          "Content creation",
+          "Motion graphics",
+          "Web design",
+          "AI productivity tools"
+        ]
+      }
+    ],
+    "workflowSteps": [
+      "01. Organization registers and creates its institutional profile.",
+      "02. Organization submits a training request with topics, participant count, dates, and budget.",
+      "03. TutorBridge reviews objectives and identifies verified professional trainers.",
+      "04. Trainers confirm availability and submit methodology.",
+      "05. TutorBridge sends a trainer proposal and itemized quotation.",
+      "06. Organization approves the proposal and quotation, establishing a training contract.",
+      "07. Trainer delivers sessions at your premises or chosen venue with attendance tracking.",
+      "08. Organization receives the completion report, invoice receipt, and submits feedback."
+    ]
+  },
+  "becomeTutor": {
+    "kicker": "Educator & Trainer Onboarding · Addis Ababa & Nationwide",
+    "title": "Become a Verified Tutor or Corporate Trainer",
+    "subtitle": "Apply to teach individual students and families, deliver organizational training programs for companies and NGOs, or register for both tracks under one account.",
+    "trackTutorBold": "Individual Tutors:",
+    "trackTutorDesc": "Teach academic subjects, languages, or practical skills with 85% net payout per completed session.",
+    "trackTrainerBold": "Corporate Trainers:",
+    "trackTrainerDesc": "Receive managed workshop invitations from organizations with transparent daily compensation.",
+    "trackVerifyBold": "Verification:",
+    "trackVerifyDesc": "National ID, degree or industry certifications, and methodology review before administrator approval.",
+    "standardTitle": "7-Step Quality & Safeguarding Standard",
+    "standardSteps": [
+      "01. National or Kebele ID verification",
+      "02. University degree or professional trainer certificate review",
+      "03. Subject or corporate workshop competency assessment",
+      "04. Teaching / facilitation methodology & reference check",
+      "05. Signed Safeguarding & Professional Conduct Agreement",
+      "06. Transparent rate & fee acceptance",
+      "07. Final administrator profile approval"
+    ],
+    "tracks": {
+      "tutor": "Individual Tutor Track",
+      "trainer": "Corporate Trainer Track",
+      "both": "Both Tutor & Corporate Trainer"
+    },
+    "submittedTitle": "Application Submitted & Active on Your Account",
+    "tutorStatusLabel": "Individual Tutor Status:",
+    "trainerStatusLabel": "Corporate Trainer Status:",
+    "submittedNote": "Your credentials are securely stored for TutorBridge administrator verification.",
+    "openDashboard": "Open Educator & Trainer Dashboard",
+    "formTitle": "Application & Credential Submission",
+    "signInApply": "Sign In with Google to Apply",
+    "fullNameLabel": "Full Professional Name",
+    "fullNamePlaceholder": "e.g., Abebe Bikila",
+    "headlineLabel": "Professional Headline",
+    "headlinePlaceholder": "e.g., Senior IT & Data Productivity Trainer",
+    "qualificationsLabel": "Educational & Professional Qualifications",
+    "qualificationsPlaceholder": "e.g., M.Sc. Information Systems, AAU; Certified Trainer",
+    "experienceLabel": "Years of Experience",
+    "tutorSectionTitle": "Individual Tutoring Details",
+    "divisionLabel": "Tutoring Division",
+    "subjectsLabel": "Subjects (comma-separated)",
+    "hourlyRateLabel": "Hourly Rate (ETB)",
+    "gradesLabel": "Grade Levels Supported",
+    "daysLabel": "Available Tutoring Days",
+    "bioLabel": "Teaching Biography & Student Outcomes",
+    "bioPlaceholder": "Describe your individual tutoring experience...",
+    "trainerSectionTitle": "Corporate & Organizational Training Profile",
+    "trainerCategoriesLabel": "Corporate Training Categories",
+    "trainerTopicsLabel": "Workshop Topics (comma-separated)",
+    "trainerDailyRateLabel": "Proposed Daily Trainer Rate (ETB)",
+    "trainerAvailabilityLabel": "Availability Summary",
+    "trainerMethodologyLabel": "Workshop Facilitation Methodology & Past Clients",
+    "trainerMethodologyPlaceholder": "Describe hands-on exercises, practical assessments, and corporate cohorts trained...",
+    "locationsLabel": "Preferred Addis Ababa Sub-Cities / Training Locations",
+    "credentialsTitle": "Private Verification Credentials (Never Displayed Publicly)",
+    "nationalIdLabel": "National ID / Kebele ID Number",
+    "nationalIdPlaceholder": "e.g., ET-NID-849201",
+    "degreeRefLabel": "Degree / Certificate Serial or Institution Ref",
+    "degreeRefPlaceholder": "e.g., AAU-SCI-2019-442",
+    "safeguardingPledge": "I agree to the TutorBridge Ethiopia Safeguarding & Professional Conduct Code, verify that my submitted credentials are authentic, and accept the platform commission/coordination terms.",
+    "submitIdle": "Submit Application",
+    "submitBusy": "Submitting Application...",
+    "errors": {
+      "locationRequired": "Please select at least one Addis Ababa sub-city or delivery location.",
+      "tutorFieldsRequired": "Please complete subjects, grade levels, and available days for tutoring.",
+      "trainerFieldsRequired": "Please select at least one corporate training category and workshop topic.",
+      "safeguardingRequired": "You must accept the Conduct Code, Safeguarding Policy, and commission terms."
+    }
+  },
+  "authModal": {
+    "title": "Sign In to TutorBridge",
+    "subtitle": "The Right Teacher. The Right Trainer. A Brighter Future.",
+    "selectAccountType": "Select Account Type",
+    "closeAria": "Close sign in dialog",
+    "continueGoogle": "Continue with Google",
+    "connecting": "Connecting...",
+    "privacyNote": "Your contact information, institutional billing records, and student profiles are strictly safeguarded.",
+    "roles": {
+      "parent": {
+        "title": "Parent / Student",
+        "desc": "Find tutors, book & track progress"
+      },
+      "tutor": {
+        "title": "Individual Tutor",
+        "desc": "Teach academic, language or skill sessions"
+      },
+      "trainer": {
+        "title": "Corporate Trainer",
+        "desc": "Deliver organizational workshops & training"
+      },
+      "organization": {
+        "title": "Organization / Corporate",
+        "desc": "Request staff training & review quotes"
+      }
+    }
+  },
+  "bookingModal": {
+    "kicker": "Self-Service Booking Request",
+    "titlePrefix": "Book",
+    "closeAria": "Close booking dialog",
+    "successTitle": "Booking Request Sent",
+    "successBodyPrefix": "Your request has been sent to",
+    "successBodySuffix": "Once confirmed, payment instructions for Telebirr or CBE Birr will appear in your Parent Dashboard.",
+    "signInBanner": "Please sign in with Google to submit a booking request and track sessions.",
+    "selectStudentLabel": "Select Student Profile",
+    "otherLearnerOption": "Other learner (enter name below)",
+    "studentNameLabel": "Student / Learner Full Name",
+    "studentNamePlaceholder": "e.g., Abel Kebede (Grade 10)",
+    "subjectLabel": "Subject / Skill",
+    "sessionsLabel": "Number of Sessions",
+    "locationLabel": "In-Person Location (Addis Ababa Sub-City)",
+    "requestTravel": "Request travel",
+    "scheduleLabel": "Preferred Schedule",
+    "defaultSchedule": "Tuesdays & Thursdays, 4:30 PM – 6:00 PM",
+    "sessionsUnit": "sessions",
+    "feeNote": "Includes 15% TutorBridge verification & coordination fee",
+    "totalDueLabel": "Total Due After Tutor Confirms",
+    "submitIdle": "Submit Booking Request",
+    "submitBusy": "Submitting...",
+    "signInToBook": "Sign In to Book",
+    "errors": {
+      "studentRequired": "Please select a student profile or enter the learner name.",
+      "scheduleRequired": "Please specify your preferred tutoring schedule.",
+      "permissions": "Could not create booking. Ensure the tutor profile is live in Firestore and your account is verified.",
+      "generic": "Failed to submit booking request. Please try again."
+    }
+  },
+  "policyModal": {
+    "closeAria": "Close policy dialog",
+    "safeguarding": {
+      "title": "Child Protection & Safeguarding Policy",
+      "sections": [
+        {
+          "heading": "1. Parental Consent & Transparency",
+          "body": "Separate student profiles for minors require explicit parent or legal guardian consent. Parents receive clear scheduling details, attendance records, and learning progress updates for every session."
+        },
+        {
+          "heading": "2. Tutor Vetting & Conduct Rules",
+          "body": "Before public approval, every tutor undergoes national ID verification, educational credential checks, reference verification, and must sign our Safeguarding Conduct Code."
+        },
+        {
+          "heading": "3. Safe In-Person Locations & Reporting",
+          "body": "All in-person tutoring occurs strictly at parent-approved family or safeguarded locations. Any concern or safeguarding incident can be reported immediately through the Support & Safeguarding channel in your dashboard."
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Service & Commission Agreement",
+      "sections": [
+        {
+          "heading": "1. Marketplace Intermediary Role",
+          "body": "TutorBridge Ethiopia acts as an intermediary connecting families and learners with independent verified educators and skills instructors."
+        },
+        {
+          "heading": "2. Transparent 15% Commission",
+          "body": "A 15% platform commission applies to completed tutoring transactions to cover tutor verification, managed matching, payment verification, and family support. Tutors receive 85% of completed bookings."
+        },
+        {
+          "heading": "3. Bookings & Payments",
+          "body": "Bookings require tutor availability confirmation and verified manual payment (Telebirr, CBE Birr, or Bank Transfer) prior to starting sessions."
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy & Data Protection Policy",
+      "sections": [
+        {
+          "heading": "1. Minimal Necessary Data",
+          "body": "We collect only information required to coordinate safe tutoring matches, verify educator credentials, and track authorized bookings and payments."
+        },
+        {
+          "heading": "2. Strict Isolation of Sensitive Records",
+          "body": "National identification numbers, educational certificates, phone numbers, and minor student profiles are never exposed in public tutor listings."
+        },
+        {
+          "heading": "3. Access Control",
+          "body": "Student profiles are accessible solely to the owning parent account and authorized TutorBridge administrators."
+        }
+      ]
+    }
+  },
+  "footer": {
+    "description": "The Right Teacher. The Right Trainer. A Brighter Future. Connecting families, students, and organizations across Addis Ababa and Ethiopia with verified educators and professional trainers.",
+    "languageLabel": "Language:",
+    "platformHeading": "Platform",
+    "links": {
+      "findTutor": "Find a Tutor",
+      "requestMatch": "Request Managed Matching",
+      "corporate": "Corporate Training",
+      "becomeTutor": "Become a Tutor / Trainer",
+      "aboutUs": "About Us",
+      "subjects": "Subjects & Skills",
+      "howItWorks": "How It Works"
+    },
+    "trustHeading": "Trust & Contact",
+    "location": "Addis Ababa, Ethiopia",
+    "safeguarding": "Child Safeguarding Policy",
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "copyright": "TutorBridge Ethiopia. All rights reserved.",
+    "paymentSummary": "In-person verified tutoring · Telebirr, CBE Birr & Bank Transfer supported"
+  }
+}

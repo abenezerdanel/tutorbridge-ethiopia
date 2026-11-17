@@ -1,0 +1,2338 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL PRIMITIVES
+    // =========================================================================
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() &&
+        request.auth.token.email is string &&
+        request.auth.token.email.lower() == 'abenezerdaniel69@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isStr(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isBoundedStrList(arr, minItems, maxItems) {
+      return arr is list &&
+        arr.size() >= minItems &&
+        arr.size() <= maxItems &&
+        (arr.size() == 0 || isStr(arr[0], 1, 120));
+    }
+
+    // Contact-protection RE2 defense-in-depth guard (no lookarounds supported in RE2)
+    function containsProhibitedContact(txt) {
+      return txt is string && (
+        // Ethiopian phone formats (+251 / 00251 / 09 / 07 with separators)
+        txt.matches('(?is).*(\\+?251|00251|09|07)[\\s.\\-()]*[0-9]{2}[\\s.\\-()]*[0-9]{2}[\\s.\\-()]*[0-9]{2}[\\s.\\-()]*[0-9]{2}.*') ||
+        // International phone numbers starting with +
+        txt.matches('(?is).*\\+[1-9][0-9\\s.\\-()]{7,15}.*') ||
+        // Direct email addresses
+        txt.matches('(?is).*[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}.*') ||
+        // External messaging, meeting, and social media domains
+        txt.matches('(?is).*(wa\\.me/|t\\.me/|telegram\\.me/|chat\\.whatsapp\\.com|zoom\\.us/|meet\\.google\\.com|teams\\.microsoft\\.com|facebook\\.com|fb\\.com|instagram\\.com|tiktok\\.com|linkedin\\.com|twitter\\.com|x\\.com/|discord\\.gg).*') ||
+        // Generic external URLs while allowing official tutorbridge.et links
+        (
+          txt.matches('(?is).*(https?://|www\\.).*') &&
+          (
+            !txt.matches('(?is).*tutorbridge\\.et.*') ||
+            txt.matches('(?is).*\\.(com|net|org|io|me|us|ly|gg|co|biz|info)(/|\\s|$).*')
+          )
+        )
+      );
+    }
+
+    function isNotRestrictedFromMessaging() {
+      return !exists(/databases/$(database)/documents/messaging_restrictions/$(request.auth.uid)) ||
+        get(/databases/$(database)/documents/messaging_restrictions/$(request.auth.uid)).data.status != 'active' ||
+        get(/databases/$(database)/documents/messaging_restrictions/$(request.auth.uid)).data.restrictionLevel in ['none', 'warning'];
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATION BLUEPRINTS
+    // =========================================================================
+
+    function isValidUserAccount(data) {
+      return data.keys().hasAll(['uid', 'email', 'fullName', 'role', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'fullName', 'role', 'phone', 'city', 'subCity', 'languagePreference', 'status', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        isStr(data.email, 3, 200) &&
+        isStr(data.fullName, 2, 120) &&
+        data.role in ['parent', 'tutor', 'trainer', 'organization', 'admin'] &&
+        data.status in ['active', 'suspended'] &&
+        (!('phone' in data) || isStr(data.phone, 0, 40)) &&
+        (!('city' in data) || isStr(data.city, 0, 80)) &&
+        (!('subCity' in data) || isStr(data.subCity, 0, 80)) &&
+        (!('languagePreference' in data) || data.languagePreference in ['en', 'am']) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'grantedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'grantedAt']) &&
+        isValidId(data.uid) &&
+        isStr(data.email, 3, 200) &&
+        data.grantedAt is timestamp;
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['division', 'name', 'topics', 'isActive', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['division', 'name', 'topics', 'isActive', 'createdAt', 'updatedAt']) &&
+        isStr(data.division, 2, 100) &&
+        isStr(data.name, 2, 120) &&
+        isBoundedStrList(data.topics, 1, 30) &&
+        data.isActive is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTutorProfile(data) {
+      return data.keys().hasAll([
+          'userId', 'fullName', 'headline', 'bio', 'qualifications', 'experienceYears',
+          'division', 'subjects', 'grades', 'city', 'subCities', 'hourlyRateEtb',
+          'availabilityDays', 'languages', 'ratingAvg', 'reviewCount', 'status',
+          'isVerified', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'fullName', 'headline', 'bio', 'photoUrl', 'qualifications', 'experienceYears',
+          'division', 'subjects', 'grades', 'city', 'subCities', 'hourlyRateEtb',
+          'availabilityDays', 'languages', 'ratingAvg', 'reviewCount', 'status',
+          'isVerified', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.userId) &&
+        isStr(data.fullName, 2, 120) &&
+        isStr(data.headline, 4, 160) &&
+        isStr(data.bio, 10, 2000) &&
+        (!('photoUrl' in data) || isStr(data.photoUrl, 0, 500)) &&
+        isStr(data.qualifications, 2, 300) &&
+        data.experienceYears is number && data.experienceYears >= 0 && data.experienceYears <= 60 &&
+        data.division in ['Academic Tutoring', 'Languages & Personal Development', 'Professional & Practical Skills'] &&
+        isBoundedStrList(data.subjects, 1, 15) &&
+        isBoundedStrList(data.grades, 1, 15) &&
+        isStr(data.city, 2, 80) &&
+        isBoundedStrList(data.subCities, 1, 15) &&
+        data.hourlyRateEtb is number && data.hourlyRateEtb >= 100 && data.hourlyRateEtb <= 25000 &&
+        isBoundedStrList(data.availabilityDays, 1, 7) &&
+        isBoundedStrList(data.languages, 1, 8) &&
+        data.ratingAvg is number && data.ratingAvg >= 0 && data.ratingAvg <= 5 &&
+        data.reviewCount is number && data.reviewCount >= 0 &&
+        data.status in ['pending', 'approved', 'rejected', 'suspended'] &&
+        data.isVerified is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTutorDocument(data) {
+      return data.keys().hasAll(['tutorId', 'userId', 'docType', 'title', 'referenceCode', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['tutorId', 'userId', 'docType', 'title', 'referenceCode', 'notes', 'status', 'createdAt', 'updatedAt']) &&
+        isValidId(data.tutorId) &&
+        isValidId(data.userId) &&
+        data.docType in ['national_id', 'degree_certificate', 'teaching_license', 'reference_letter'] &&
+        isStr(data.title, 2, 160) &&
+        isStr(data.referenceCode, 2, 120) &&
+        (!('notes' in data) || isStr(data.notes, 0, 500)) &&
+        data.status in ['pending', 'verified', 'rejected'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidStudentProfile(data) {
+      return data.keys().hasAll(['parentId', 'fullName', 'age', 'gradeLevel', 'subjectsNeeded', 'parentConsent', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['parentId', 'fullName', 'age', 'gradeLevel', 'schoolName', 'subjectsNeeded', 'learningGoals', 'preferredSchedule', 'parentConsent', 'createdAt', 'updatedAt']) &&
+        isValidId(data.parentId) &&
+        isStr(data.fullName, 2, 120) &&
+        data.age is number && data.age >= 3 && data.age <= 65 &&
+        isStr(data.gradeLevel, 1, 80) &&
+        (!('schoolName' in data) || isStr(data.schoolName, 0, 120)) &&
+        isBoundedStrList(data.subjectsNeeded, 1, 15) &&
+        (!('learningGoals' in data) || isStr(data.learningGoals, 0, 600)) &&
+        (!('preferredSchedule' in data) || isStr(data.preferredSchedule, 0, 200)) &&
+        data.parentConsent is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTutorRequest(data) {
+      return data.keys().hasAll(['parentId', 'parentName', 'studentName', 'gradeLevel', 'division', 'subjects', 'city', 'subCity', 'preferredSchedule', 'budgetMaxEtb', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['parentId', 'parentName', 'studentName', 'gradeLevel', 'division', 'subjects', 'city', 'subCity', 'preferredSchedule', 'budgetMaxEtb', 'notes', 'status', 'proposedTutorId', 'proposedTutorName', 'adminNotes', 'createdAt', 'updatedAt']) &&
+        isValidId(data.parentId) &&
+        isStr(data.parentName, 2, 120) &&
+        isStr(data.studentName, 2, 120) &&
+        isStr(data.gradeLevel, 1, 80) &&
+        data.division in ['Academic Tutoring', 'Languages & Personal Development', 'Professional & Practical Skills'] &&
+        isBoundedStrList(data.subjects, 1, 10) &&
+        isStr(data.city, 2, 80) &&
+        isStr(data.subCity, 2, 80) &&
+        isStr(data.preferredSchedule, 2, 200) &&
+        data.budgetMaxEtb is number && data.budgetMaxEtb >= 100 && data.budgetMaxEtb <= 50000 &&
+        (!('notes' in data) || isStr(data.notes, 0, 1000)) &&
+        data.status in ['pending_review', 'candidates_proposed', 'matched', 'cancelled'] &&
+        (!('proposedTutorId' in data) || isStr(data.proposedTutorId, 0, 128)) &&
+        (!('proposedTutorName' in data) || isStr(data.proposedTutorName, 0, 120)) &&
+        (!('adminNotes' in data) || isStr(data.adminNotes, 0, 600)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'parentId', 'parentName', 'studentName', 'tutorId', 'tutorUserId', 'tutorName',
+          'subject', 'sessionCount', 'ratePerSessionEtb', 'totalAmountEtb',
+          'commissionRate', 'commissionAmountEtb', 'tutorPayoutEtb',
+          'locationNeighborhood', 'scheduleSummary', 'status', 'paymentStatus',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'parentId', 'parentName', 'studentId', 'studentName', 'tutorId', 'tutorUserId', 'tutorName',
+          'subject', 'sessionCount', 'ratePerSessionEtb', 'totalAmountEtb',
+          'commissionRate', 'commissionAmountEtb', 'tutorPayoutEtb',
+          'locationNeighborhood', 'scheduleSummary', 'status', 'paymentStatus',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.parentId) &&
+        isStr(data.parentName, 2, 120) &&
+        (!('studentId' in data) || isStr(data.studentId, 0, 128)) &&
+        isStr(data.studentName, 2, 120) &&
+        isValidId(data.tutorId) &&
+        isValidId(data.tutorUserId) &&
+        isStr(data.tutorName, 2, 120) &&
+        isStr(data.subject, 2, 100) &&
+        data.sessionCount is number && data.sessionCount >= 1 && data.sessionCount <= 100 &&
+        data.ratePerSessionEtb is number && data.ratePerSessionEtb >= 100 &&
+        data.totalAmountEtb is number && data.totalAmountEtb >= 100 &&
+        data.commissionRate is number && data.commissionRate >= 0 && data.commissionRate <= 0.5 &&
+        data.commissionAmountEtb is number && data.commissionAmountEtb >= 0 &&
+        data.tutorPayoutEtb is number && data.tutorPayoutEtb >= 0 &&
+        isStr(data.locationNeighborhood, 2, 120) &&
+        isStr(data.scheduleSummary, 2, 240) &&
+        data.status in ['pending_tutor', 'pending_payment', 'confirmed', 'completed', 'cancelled'] &&
+        data.paymentStatus in ['unpaid', 'submitted', 'verified', 'refunded'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentRecord(data) {
+      return data.keys().hasAll([
+          'bookingId', 'parentId', 'tutorId', 'tutorUserId', 'method',
+          'transactionRef', 'amountEtb', 'commissionEtb', 'tutorPayoutEtb',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'bookingId', 'parentId', 'tutorId', 'tutorUserId', 'method',
+          'transactionRef', 'amountEtb', 'commissionEtb', 'tutorPayoutEtb',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.bookingId) &&
+        isValidId(data.parentId) &&
+        isValidId(data.tutorId) &&
+        isValidId(data.tutorUserId) &&
+        data.method in ['Telebirr', 'CBE Birr', 'Bank Transfer'] &&
+        isStr(data.transactionRef, 3, 120) &&
+        data.amountEtb is number && data.amountEtb >= 100 &&
+        data.commissionEtb is number && data.commissionEtb >= 0 &&
+        data.tutorPayoutEtb is number && data.tutorPayoutEtb >= 0 &&
+        data.status in ['pending_verification', 'verified', 'rejected', 'refunded'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProgressReport(data) {
+      return data.keys().hasAll([
+          'bookingId', 'parentId', 'tutorId', 'tutorUserId', 'tutorName',
+          'studentName', 'subject', 'sessionDate', 'attendanceStatus', 'summary',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'bookingId', 'parentId', 'tutorId', 'tutorUserId', 'tutorName',
+          'studentName', 'subject', 'sessionDate', 'attendanceStatus', 'summary',
+          'parentComment', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.bookingId) &&
+        isValidId(data.parentId) &&
+        isValidId(data.tutorId) &&
+        isValidId(data.tutorUserId) &&
+        isStr(data.tutorName, 2, 120) &&
+        isStr(data.studentName, 2, 120) &&
+        isStr(data.subject, 2, 100) &&
+        isStr(data.sessionDate, 4, 40) &&
+        data.attendanceStatus in ['present', 'absent', 'rescheduled'] &&
+        isStr(data.summary, 4, 1000) &&
+        (!('parentComment' in data) || isStr(data.parentComment, 0, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['bookingId', 'tutorId', 'parentId', 'authorName', 'rating', 'comment', 'createdAt']) &&
+        data.keys().hasOnly(['bookingId', 'tutorId', 'parentId', 'authorName', 'rating', 'comment', 'createdAt']) &&
+        isValidId(data.bookingId) &&
+        isValidId(data.tutorId) &&
+        isValidId(data.parentId) &&
+        isStr(data.authorName, 2, 100) &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        isStr(data.comment, 4, 800) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['userId', 'userName', 'category', 'subject', 'message', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['userId', 'userName', 'category', 'subject', 'message', 'status', 'adminResponse', 'createdAt', 'updatedAt']) &&
+        isValidId(data.userId) &&
+        isStr(data.userName, 2, 120) &&
+        data.category in ['general', 'payment', 'reschedule', 'safeguarding', 'corporate'] &&
+        isStr(data.subject, 3, 160) &&
+        isStr(data.message, 5, 1500) &&
+        data.status in ['open', 'in_review', 'resolved'] &&
+        (!('adminResponse' in data) || isStr(data.adminResponse, 0, 1000)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminLog(data) {
+      return data.keys().hasAll(['adminUid', 'action', 'targetCollection', 'targetId', 'createdAt']) &&
+        data.keys().hasOnly(['adminUid', 'action', 'targetCollection', 'targetId', 'details', 'createdAt']) &&
+        isValidId(data.adminUid) &&
+        isStr(data.action, 2, 120) &&
+        isStr(data.targetCollection, 2, 80) &&
+        isStr(data.targetId, 1, 128) &&
+        (!('details' in data) || isStr(data.details, 0, 500)) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPlatformSetting(data) {
+      return data.keys().hasAll(['key', 'updatedAt']) &&
+        data.keys().hasOnly(['key', 'commissionRate', 'updatedAt']) &&
+        isStr(data.key, 2, 80) &&
+        (!('commissionRate' in data) || (data.commissionRate is number && data.commissionRate >= 0 && data.commissionRate <= 0.5)) &&
+        data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // V1.1 CORPORATE TRAINING ENTITY BLUEPRINTS
+    // =========================================================================
+
+    function isValidOrganization(data) {
+      return data.keys().hasAll([
+          'ownerUid', 'name', 'orgType', 'industry', 'contactPerson',
+          'officialEmail', 'phone', 'address', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'ownerUid', 'name', 'orgType', 'industry', 'contactPerson',
+          'officialEmail', 'phone', 'address', 'logoUrl', 'billingInfo',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.ownerUid) &&
+        isStr(data.name, 2, 160) &&
+        data.orgType in ['Private Company', 'NGO', 'Government Institution', 'School / University', 'Development Organization', 'SME', 'Other'] &&
+        isStr(data.industry, 2, 120) &&
+        isStr(data.contactPerson, 2, 120) &&
+        isStr(data.officialEmail, 3, 200) &&
+        isStr(data.phone, 4, 40) &&
+        isStr(data.address, 2, 240) &&
+        (!('logoUrl' in data) || isStr(data.logoUrl, 0, 500)) &&
+        (!('billingInfo' in data) || isStr(data.billingInfo, 0, 400)) &&
+        data.status in ['pending', 'approved', 'suspended'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidOrganizationUser(data) {
+      return data.keys().hasAll(['organizationId', 'userId', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['organizationId', 'userId', 'role', 'createdAt', 'updatedAt']) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.userId) &&
+        data.role in ['owner', 'coordinator', 'viewer'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateRequest(data) {
+      return data.keys().hasAll([
+          'organizationId', 'ownerUid', 'organizationName', 'category', 'topics',
+          'objectives', 'participantCount', 'preferredDates', 'duration', 'location',
+          'budgetMinEtb', 'budgetMaxEtb', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'organizationId', 'ownerUid', 'organizationName', 'category', 'topics',
+          'objectives', 'participantCount', 'preferredDates', 'duration', 'location',
+          'budgetMinEtb', 'budgetMaxEtb', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.ownerUid) &&
+        isStr(data.organizationName, 2, 160) &&
+        isStr(data.category, 2, 120) &&
+        isBoundedStrList(data.topics, 1, 20) &&
+        isStr(data.objectives, 5, 1500) &&
+        data.participantCount is number && data.participantCount >= 1 && data.participantCount <= 5000 &&
+        isStr(data.preferredDates, 2, 160) &&
+        data.duration in ['One day', 'Two to three days', 'One week', 'Several weeks', 'Monthly / Customized'] &&
+        isStr(data.location, 2, 200) &&
+        data.budgetMinEtb is number && data.budgetMinEtb >= 500 &&
+        data.budgetMaxEtb is number && data.budgetMaxEtb >= data.budgetMinEtb &&
+        data.status in ['pending_review', 'trainers_sourced', 'proposal_sent', 'approved', 'in_progress', 'completed', 'rejected'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateTrainer(data) {
+      return data.keys().hasAll([
+          'userId', 'fullName', 'headline', 'qualifications', 'experienceYears',
+          'categories', 'topics', 'methodology', 'availability', 'preferredLocations',
+          'proposedDailyRateEtb', 'isTutorAlso', 'status', 'isVerified', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'fullName', 'headline', 'bio', 'photoUrl', 'qualifications',
+          'certifications', 'workExperience', 'experienceYears', 'categories', 'topics',
+          'pastProjects', 'portfolioSamples', 'methodology', 'availability',
+          'preferredLocations', 'languages', 'ratingAvg', 'reviewCount',
+          'proposedDailyRateEtb', 'isTutorAlso', 'pendingQualificationUpdate',
+          'status', 'isVerified', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.userId) &&
+        isStr(data.fullName, 2, 120) &&
+        isStr(data.headline, 4, 160) &&
+        (!('bio' in data) || isStr(data.bio, 0, 2000)) &&
+        (!('photoUrl' in data) || isStr(data.photoUrl, 0, 500)) &&
+        isStr(data.qualifications, 2, 400) &&
+        (!('certifications' in data) || isBoundedStrList(data.certifications, 0, 20)) &&
+        (!('workExperience' in data) || isStr(data.workExperience, 0, 1500)) &&
+        data.experienceYears is number && data.experienceYears >= 0 && data.experienceYears <= 60 &&
+        isBoundedStrList(data.categories, 1, 10) &&
+        isBoundedStrList(data.topics, 1, 25) &&
+        (!('pastProjects' in data) || isBoundedStrList(data.pastProjects, 0, 20)) &&
+        (!('portfolioSamples' in data) || isBoundedStrList(data.portfolioSamples, 0, 20)) &&
+        isStr(data.methodology, 10, 1500) &&
+        isStr(data.availability, 2, 200) &&
+        isBoundedStrList(data.preferredLocations, 1, 15) &&
+        (!('languages' in data) || isBoundedStrList(data.languages, 0, 10)) &&
+        (!('ratingAvg' in data) || (data.ratingAvg is number && data.ratingAvg >= 0 && data.ratingAvg <= 5)) &&
+        (!('reviewCount' in data) || (data.reviewCount is number && data.reviewCount >= 0 && data.reviewCount <= 10000)) &&
+        data.proposedDailyRateEtb is number && data.proposedDailyRateEtb >= 500 && data.proposedDailyRateEtb <= 250000 &&
+        data.isTutorAlso is bool &&
+        (!('pendingQualificationUpdate' in data) || isStr(data.pendingQualificationUpdate, 0, 600)) &&
+        data.status in ['pending', 'approved', 'rejected', 'suspended'] &&
+        data.isVerified is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainerPortfolioItem(data) {
+      return data.keys().hasAll([
+          'trainerId', 'trainerUserId', 'title', 'category', 'summary', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'trainerId', 'trainerUserId', 'title', 'category', 'summary',
+          'outcomeMetrics', 'status', 'adminNotes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.trainerId) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.title, 2, 160) &&
+        isStr(data.category, 2, 120) &&
+        isStr(data.summary, 5, 1500) &&
+        (!('outcomeMetrics' in data) || isStr(data.outcomeMetrics, 0, 400)) &&
+        data.status in ['pending', 'approved', 'rejected'] &&
+        (!('adminNotes' in data) || isStr(data.adminNotes, 0, 400)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSavedTrainer(data) {
+      return data.keys().hasAll([
+          'organizationId', 'organizationOwnerUid', 'trainerId', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'organizationId', 'organizationOwnerUid', 'trainerId', 'notes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerId) &&
+        (!('notes' in data) || isStr(data.notes, 0, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainerSelectionRequest(data) {
+      return data.keys().hasAll([
+          'organizationId', 'organizationOwnerUid', 'organizationName',
+          'selectedTrainerId', 'selectedTrainerUserId', 'selectedTrainerName',
+          'rankedTrainerIds', 'rankedTrainerNames', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'organizationId', 'organizationOwnerUid', 'organizationName', 'corporateRequestId',
+          'selectedTrainerId', 'selectedTrainerUserId', 'selectedTrainerName',
+          'rankedTrainerIds', 'rankedTrainerNames', 'notes', 'status',
+          'suggestedTrainerId', 'suggestedTrainerName', 'adminNotes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isStr(data.organizationName, 2, 160) &&
+        (!('corporateRequestId' in data) || isStr(data.corporateRequestId, 0, 128)) &&
+        isValidId(data.selectedTrainerId) &&
+        isValidId(data.selectedTrainerUserId) &&
+        isStr(data.selectedTrainerName, 2, 120) &&
+        isBoundedStrList(data.rankedTrainerIds, 1, 10) &&
+        isBoundedStrList(data.rankedTrainerNames, 1, 10) &&
+        (!('notes' in data) || isStr(data.notes, 0, 1000)) &&
+        data.status in ['pending_tutorbridge_review', 'in_coordination', 'approved', 'alternative_suggested', 'rejected'] &&
+        (!('suggestedTrainerId' in data) || isStr(data.suggestedTrainerId, 0, 128)) &&
+        (!('suggestedTrainerName' in data) || isStr(data.suggestedTrainerName, 0, 120)) &&
+        (!('adminNotes' in data) || isStr(data.adminNotes, 0, 600)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateNegotiation(data) {
+      return data.keys().hasAll([
+          'targetType', 'participantLabel', 'proposedAmountEtb', 'proposedTerms',
+          'status', 'adminUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'targetType', 'requestId', 'selectionRequestId', 'organizationOwnerUid',
+          'trainerUserId', 'participantLabel', 'proposedAmountEtb', 'proposedTerms',
+          'notes', 'status', 'adminUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.targetType in ['organization_quote', 'trainer_compensation'] &&
+        (!('requestId' in data) || isStr(data.requestId, 0, 128)) &&
+        (!('selectionRequestId' in data) || isStr(data.selectionRequestId, 0, 128)) &&
+        (!('organizationOwnerUid' in data) || isStr(data.organizationOwnerUid, 0, 128)) &&
+        (!('trainerUserId' in data) || isStr(data.trainerUserId, 0, 128)) &&
+        isStr(data.participantLabel, 2, 160) &&
+        data.proposedAmountEtb is number && data.proposedAmountEtb >= 0 &&
+        isStr(data.proposedTerms, 2, 600) &&
+        (!('notes' in data) || isStr(data.notes, 0, 600)) &&
+        data.status in ['open', 'agreed', 'superseded'] &&
+        isValidId(data.adminUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingProposal(data) {
+      return data.keys().hasAll([
+          'requestId', 'organizationId', 'organizationOwnerUid', 'trainerId', 'trainerUserId',
+          'trainerName', 'trainerQualifications', 'trainerMethodology', 'proposedSchedule',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'requestId', 'organizationId', 'organizationOwnerUid', 'trainerId', 'trainerUserId',
+          'trainerName', 'trainerQualifications', 'trainerMethodology', 'proposedSchedule',
+          'status', 'trainerResponseNotes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.requestId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerId) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.trainerName, 2, 120) &&
+        isStr(data.trainerQualifications, 2, 400) &&
+        isStr(data.trainerMethodology, 4, 1500) &&
+        isStr(data.proposedSchedule, 2, 240) &&
+        data.status in ['proposed', 'accepted_by_trainer', 'declined_by_trainer', 'approved_by_org', 'rejected_by_org'] &&
+        (!('trainerResponseNotes' in data) || isStr(data.trainerResponseNotes, 0, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingQuotation(data) {
+      return data.keys().hasAll([
+          'requestId', 'proposalId', 'organizationId', 'organizationOwnerUid',
+          'trainerCompensationEtb', 'logisticalExpensesEtb', 'serviceFeeEtb',
+          'totalAmountEtb', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'requestId', 'proposalId', 'organizationId', 'organizationOwnerUid',
+          'trainerCompensationEtb', 'logisticalExpensesEtb', 'serviceFeeEtb',
+          'coordinationFeeEtb', 'additionalChargesEtb', 'totalAmountEtb',
+          'paymentTerms', 'cancellationTerms', 'validityDays', 'pricingNotes',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.requestId) &&
+        isValidId(data.proposalId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        data.trainerCompensationEtb is number && data.trainerCompensationEtb >= 0 &&
+        data.logisticalExpensesEtb is number && data.logisticalExpensesEtb >= 0 &&
+        data.serviceFeeEtb is number && data.serviceFeeEtb >= 0 &&
+        (!('coordinationFeeEtb' in data) || (data.coordinationFeeEtb is number && data.coordinationFeeEtb >= 0)) &&
+        (!('additionalChargesEtb' in data) || (data.additionalChargesEtb is number && data.additionalChargesEtb >= 0)) &&
+        data.totalAmountEtb is number && data.totalAmountEtb >= 100 &&
+        (!('paymentTerms' in data) || isStr(data.paymentTerms, 0, 400)) &&
+        (!('cancellationTerms' in data) || isStr(data.cancellationTerms, 0, 600)) &&
+        (!('validityDays' in data) || (data.validityDays is number && data.validityDays >= 1 && data.validityDays <= 365)) &&
+        (!('pricingNotes' in data) || isStr(data.pricingNotes, 0, 600)) &&
+        data.status in ['sent', 'approved', 'rejected'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingContract(data) {
+      return data.keys().hasAll([
+          'requestId', 'quotationId', 'organizationId', 'organizationOwnerUid',
+          'organizationName', 'trainerId', 'trainerUserId', 'trainerName', 'title',
+          'totalAmountEtb', 'trainerCompensationEtb', 'serviceFeeEtb', 'paymentTerms',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'requestId', 'quotationId', 'organizationId', 'organizationOwnerUid',
+          'organizationName', 'trainerId', 'trainerUserId', 'trainerName', 'title',
+          'agreementNumber', 'totalAmountEtb', 'trainerCompensationEtb', 'serviceFeeEtb',
+          'paymentTerms', 'serviceTermsSummary', 'cancellationTerms', 'governingLawClause',
+          'orgAcceptedAt', 'orgAcceptedByName', 'orgAcceptedRole', 'replacementHistory',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.requestId) &&
+        isValidId(data.quotationId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isStr(data.organizationName, 2, 160) &&
+        isValidId(data.trainerId) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.trainerName, 2, 120) &&
+        isStr(data.title, 2, 200) &&
+        (!('agreementNumber' in data) || isStr(data.agreementNumber, 0, 80)) &&
+        data.totalAmountEtb is number && data.totalAmountEtb >= 100 &&
+        data.trainerCompensationEtb is number && data.trainerCompensationEtb >= 0 &&
+        data.serviceFeeEtb is number && data.serviceFeeEtb >= 0 &&
+        isStr(data.paymentTerms, 2, 200) &&
+        (!('serviceTermsSummary' in data) || isStr(data.serviceTermsSummary, 0, 1500)) &&
+        (!('cancellationTerms' in data) || isStr(data.cancellationTerms, 0, 600)) &&
+        (!('governingLawClause' in data) || isStr(data.governingLawClause, 0, 600)) &&
+        (!('orgAcceptedAt' in data) || isStr(data.orgAcceptedAt, 0, 60)) &&
+        (!('orgAcceptedByName' in data) || isStr(data.orgAcceptedByName, 0, 120)) &&
+        (!('orgAcceptedRole' in data) || isStr(data.orgAcceptedRole, 0, 120)) &&
+        (!('replacementHistory' in data) || isBoundedStrList(data.replacementHistory, 0, 30)) &&
+        data.status in ['active', 'completed', 'cancelled'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainerAssignmentAgreement(data) {
+      return data.keys().hasAll([
+          'contractId', 'requestId', 'trainerId', 'trainerUserId', 'trainerName',
+          'organizationLabel', 'title', 'scopeOfWork', 'scheduleSummary',
+          'trainerCompensationEtb', 'paymentSchedule', 'cancellationTerms',
+          'governingLawClause', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'requestId', 'trainerId', 'trainerUserId', 'trainerName',
+          'organizationLabel', 'title', 'scopeOfWork', 'scheduleSummary',
+          'trainerCompensationEtb', 'paymentSchedule', 'cancellationTerms',
+          'governingLawClause', 'trainerAcceptedAt', 'trainerAcceptedName',
+          'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.requestId) &&
+        isValidId(data.trainerId) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.trainerName, 2, 120) &&
+        isStr(data.organizationLabel, 2, 160) &&
+        isStr(data.title, 2, 200) &&
+        isStr(data.scopeOfWork, 4, 1500) &&
+        isStr(data.scheduleSummary, 2, 240) &&
+        data.trainerCompensationEtb is number && data.trainerCompensationEtb >= 0 &&
+        isStr(data.paymentSchedule, 2, 400) &&
+        isStr(data.cancellationTerms, 2, 600) &&
+        isStr(data.governingLawClause, 2, 600) &&
+        (!('trainerAcceptedAt' in data) || isStr(data.trainerAcceptedAt, 0, 60)) &&
+        (!('trainerAcceptedName' in data) || isStr(data.trainerAcceptedName, 0, 120)) &&
+        data.status in ['pending_acceptance', 'active', 'completed', 'cancelled'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainerCompensationRecord(data) {
+      return data.keys().hasAll([
+          'agreementId', 'contractId', 'trainerId', 'trainerUserId', 'trainerName',
+          'amountEtb', 'paymentMethod', 'transactionRef', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'agreementId', 'contractId', 'trainerId', 'trainerUserId', 'trainerName',
+          'amountEtb', 'paymentMethod', 'transactionRef', 'status', 'paidDate', 'notes',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.agreementId) &&
+        isValidId(data.contractId) &&
+        isValidId(data.trainerId) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.trainerName, 2, 120) &&
+        data.amountEtb is number && data.amountEtb >= 0 &&
+        data.paymentMethod in ['Telebirr', 'CBE Birr', 'Bank Transfer'] &&
+        isStr(data.transactionRef, 2, 120) &&
+        data.status in ['scheduled', 'paid', 'withheld', 'cancelled'] &&
+        (!('paidDate' in data) || isStr(data.paidDate, 0, 60)) &&
+        (!('notes' in data) || isStr(data.notes, 0, 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateRefundRecord(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'organizationName',
+          'refundAmountEtb', 'cancellationFeeEtb', 'reason', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'invoiceId', 'organizationId', 'organizationOwnerUid', 'organizationName',
+          'refundAmountEtb', 'cancellationFeeEtb', 'reason', 'status', 'processedRef',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        (!('invoiceId' in data) || isStr(data.invoiceId, 0, 128)) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isStr(data.organizationName, 2, 160) &&
+        data.refundAmountEtb is number && data.refundAmountEtb >= 0 &&
+        data.cancellationFeeEtb is number && data.cancellationFeeEtb >= 0 &&
+        isStr(data.reason, 4, 1000) &&
+        data.status in ['requested', 'approved', 'processed', 'rejected'] &&
+        (!('processedRef' in data) || isStr(data.processedRef, 0, 120)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingSchedule(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'sessionTitle', 'sessionDate', 'timeRange', 'venue', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'sessionTitle', 'sessionDate', 'timeRange', 'venue', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.sessionTitle, 2, 160) &&
+        isStr(data.sessionDate, 4, 40) &&
+        isStr(data.timeRange, 2, 80) &&
+        isStr(data.venue, 2, 200) &&
+        data.status in ['scheduled', 'completed', 'rescheduled'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingParticipant(data) {
+      return data.keys().hasAll(['contractId', 'organizationId', 'organizationOwnerUid', 'fullName', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['contractId', 'organizationId', 'organizationOwnerUid', 'fullName', 'department', 'email', 'createdAt', 'updatedAt']) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isStr(data.fullName, 2, 120) &&
+        (!('department' in data) || isStr(data.department, 0, 120)) &&
+        (!('email' in data) || isStr(data.email, 0, 200)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingAttendance(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'sessionDate', 'presentCount', 'totalParticipants', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'sessionDate', 'presentCount', 'totalParticipants', 'notes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.sessionDate, 4, 40) &&
+        data.presentCount is number && data.presentCount >= 0 &&
+        data.totalParticipants is number && data.totalParticipants >= 1 &&
+        (!('notes' in data) || isStr(data.notes, 0, 600)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTrainingReport(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'trainerName', 'organizationName', 'summary', 'outcomesAchieved',
+          'attendanceRatePct', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerUserId',
+          'trainerName', 'organizationName', 'summary', 'outcomesAchieved',
+          'attendanceRatePct', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerUserId) &&
+        isStr(data.trainerName, 2, 120) &&
+        isStr(data.organizationName, 2, 160) &&
+        isStr(data.summary, 5, 1500) &&
+        isStr(data.outcomesAchieved, 5, 1000) &&
+        data.attendanceRatePct is number && data.attendanceRatePct >= 0 && data.attendanceRatePct <= 100 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateInvoice(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'invoiceNumber',
+          'amountEtb', 'trainerCompensationEtb', 'serviceFeeEtb', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'invoiceNumber',
+          'amountEtb', 'trainerCompensationEtb', 'serviceFeeEtb', 'paymentMethod',
+          'transactionRef', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isStr(data.invoiceNumber, 3, 60) &&
+        data.amountEtb is number && data.amountEtb >= 100 &&
+        data.trainerCompensationEtb is number && data.trainerCompensationEtb >= 0 &&
+        data.serviceFeeEtb is number && data.serviceFeeEtb >= 0 &&
+        (!('paymentMethod' in data) || isStr(data.paymentMethod, 0, 60)) &&
+        (!('transactionRef' in data) || isStr(data.transactionRef, 0, 120)) &&
+        data.status in ['unpaid', 'payment_submitted', 'paid', 'refunded'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCorporateFeedback(data) {
+      return data.keys().hasAll([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerId',
+          'rating', 'comment', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'contractId', 'organizationId', 'organizationOwnerUid', 'trainerId',
+          'rating', 'comment', 'createdAt'
+        ]) &&
+        isValidId(data.contractId) &&
+        isValidId(data.organizationId) &&
+        isValidId(data.organizationOwnerUid) &&
+        isValidId(data.trainerId) &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        isStr(data.comment, 4, 1000) &&
+        data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // CONTACT PROTECTION & MESSAGING ENTITY BLUEPRINTS
+    // =========================================================================
+
+    function isValidConversation(data) {
+      return data.keys().hasAll([
+          'conversationType', 'participantUids', 'participantSummary', 'relatedType',
+          'subject', 'lastMessagePreview', 'unreadByUids', 'status', 'createdByUid',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'conversationType', 'participantUids', 'participantSummary', 'guardianUid',
+          'relatedType', 'relatedId', 'subject', 'lastMessagePreview', 'lastSenderUid',
+          'unreadByUids', 'status', 'createdByUid', 'createdAt', 'updatedAt'
+        ]) &&
+        data.conversationType in ['parent_tutor', 'student_tutor', 'client_support', 'admin_user'] &&
+        isBoundedStrList(data.participantUids, 2, 10) &&
+        isStr(data.participantSummary, 2, 240) &&
+        (!('guardianUid' in data) || isStr(data.guardianUid, 0, 128)) &&
+        data.relatedType in ['booking', 'tutor_request', 'corporate_request', 'corporate_contract', 'support', 'general'] &&
+        (!('relatedId' in data) || isStr(data.relatedId, 0, 128)) &&
+        isStr(data.subject, 2, 160) &&
+        isStr(data.lastMessagePreview, 0, 240) &&
+        (!('lastSenderUid' in data) || isStr(data.lastSenderUid, 0, 128)) &&
+        isBoundedStrList(data.unreadByUids, 0, 10) &&
+        data.status in ['active', 'flagged', 'locked', 'archived'] &&
+        isValidId(data.createdByUid) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll([
+          'conversationId', 'participantUids', 'senderUid', 'senderName', 'senderRole',
+          'text', 'attachmentScanStatus', 'moderationStatus', 'readByUids',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'conversationId', 'participantUids', 'senderUid', 'senderName', 'senderRole',
+          'text', 'attachmentName', 'attachmentType', 'attachmentSizeBytes',
+          'attachmentScanStatus', 'moderationStatus', 'moderationReason', 'readByUids',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.conversationId) &&
+        isBoundedStrList(data.participantUids, 2, 10) &&
+        isValidId(data.senderUid) &&
+        isStr(data.senderName, 2, 120) &&
+        data.senderRole in ['parent', 'tutor', 'trainer', 'organization', 'admin'] &&
+        isStr(data.text, 1, 2000) &&
+        (!('attachmentName' in data) || isStr(data.attachmentName, 0, 160)) &&
+        (!('attachmentType' in data) || isStr(data.attachmentType, 0, 80)) &&
+        (!('attachmentSizeBytes' in data) || (data.attachmentSizeBytes is number && data.attachmentSizeBytes >= 0 && data.attachmentSizeBytes <= 2097152)) &&
+        data.attachmentScanStatus in ['none', 'clean', 'flagged'] &&
+        data.moderationStatus in ['approved', 'flagged', 'removed'] &&
+        (!('moderationReason' in data) || isStr(data.moderationReason, 0, 300)) &&
+        isBoundedStrList(data.readByUids, 0, 10) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessageReport(data) {
+      return data.keys().hasAll([
+          'conversationId', 'messageId', 'reporterUid', 'reporterName',
+          'reportedUserUid', 'reason', 'details', 'status', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'conversationId', 'messageId', 'reporterUid', 'reporterName',
+          'reportedUserUid', 'reason', 'details', 'status', 'adminNotes',
+          'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.conversationId) &&
+        isValidId(data.messageId) &&
+        isValidId(data.reporterUid) &&
+        isStr(data.reporterName, 2, 120) &&
+        isValidId(data.reportedUserUid) &&
+        data.reason in ['contact_sharing', 'off_platform_solicitation', 'harassment', 'inappropriate_attachment', 'other'] &&
+        isStr(data.details, 4, 1000) &&
+        data.status in ['open', 'under_review', 'resolved', 'dismissed'] &&
+        (!('adminNotes' in data) || isStr(data.adminNotes, 0, 600)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidModerationFlag(data) {
+      return data.keys().hasAll([
+          'userId', 'userName', 'conversationId', 'attemptedText', 'violationType',
+          'detectionResult', 'matchedIndicators', 'enforcementAction', 'reviewStatus',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'userName', 'conversationId', 'messageId', 'attemptedText',
+          'violationType', 'detectionResult', 'matchedIndicators', 'enforcementAction',
+          'reviewStatus', 'reviewedByUid', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.userId) &&
+        isStr(data.userName, 2, 120) &&
+        isValidId(data.conversationId) &&
+        (!('messageId' in data) || isStr(data.messageId, 0, 128)) &&
+        isStr(data.attemptedText, 1, 2000) &&
+        data.violationType in ['phone_number', 'whatsapp', 'email', 'website_url', 'social_media', 'external_meeting', 'split_contact', 'suspicious_attachment', 'obfuscated_contact', 'uncertain_review'] &&
+        data.detectionResult in ['blocked', 'flagged_for_review', 'approved_exception'] &&
+        isBoundedStrList(data.matchedIndicators, 0, 20) &&
+        data.enforcementAction in ['warning', 'flagged_only', 'temp_restriction', 'admin_review', 'none'] &&
+        data.reviewStatus in ['pending', 'confirmed_violation', 'false_positive', 'exception_granted'] &&
+        (!('reviewedByUid' in data) || isStr(data.reviewedByUid, 0, 128)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserViolation(data) {
+      return data.keys().hasAll([
+          'userId', 'userName', 'conversationId', 'violationType',
+          'detectionResult', 'enforcementAction', 'details', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'userName', 'conversationId', 'violationType',
+          'detectionResult', 'enforcementAction', 'details', 'createdAt'
+        ]) &&
+        isValidId(data.userId) &&
+        isStr(data.userName, 2, 120) &&
+        isValidId(data.conversationId) &&
+        isStr(data.violationType, 2, 80) &&
+        isStr(data.detectionResult, 2, 80) &&
+        isStr(data.enforcementAction, 2, 80) &&
+        isStr(data.details, 2, 600) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidMessagingRestriction(data) {
+      return data.keys().hasAll([
+          'userId', 'userName', 'violationCount', 'restrictionLevel',
+          'status', 'reason', 'appealStatus', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'userId', 'userName', 'violationCount', 'restrictionLevel',
+          'status', 'reason', 'restrictedUntilIso', 'appealStatus',
+          'appealText', 'adminDecisionNotes', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.userId) &&
+        isStr(data.userName, 2, 120) &&
+        data.violationCount is number && data.violationCount >= 0 && data.violationCount <= 1000 &&
+        data.restrictionLevel in ['none', 'warning', 'temp_restricted', 'suspended_review'] &&
+        data.status in ['none', 'active', 'lifted'] &&
+        isStr(data.reason, 2, 500) &&
+        (!('restrictedUntilIso' in data) || isStr(data.restrictedUntilIso, 0, 60)) &&
+        data.appealStatus in ['none', 'pending', 'approved', 'rejected'] &&
+        (!('appealText' in data) || isStr(data.appealText, 0, 1000)) &&
+        (!('adminDecisionNotes' in data) || isStr(data.adminDecisionNotes, 0, 600)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidModerationAction(data) {
+      return data.keys().hasAll(['adminUid', 'targetUserId', 'actionType', 'notes', 'createdAt']) &&
+        data.keys().hasOnly(['adminUid', 'targetUserId', 'conversationId', 'flagId', 'actionType', 'notes', 'createdAt']) &&
+        isValidId(data.adminUid) &&
+        isValidId(data.targetUserId) &&
+        (!('conversationId' in data) || isStr(data.conversationId, 0, 128)) &&
+        (!('flagId' in data) || isStr(data.flagId, 0, 128)) &&
+        data.actionType in ['issue_warning', 'restrict_messaging', 'lift_restriction', 'suspend_account', 'approve_exception', 'dismiss_flag', 'resolve_appeal', 'update_settings'] &&
+        isStr(data.notes, 2, 600) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPlatformModerationSetting(data) {
+      return data.keys().hasAll([
+          'key', 'blockPhoneNumbers', 'blockWhatsApp', 'blockEmails', 'blockUrls',
+          'blockSocialMedia', 'blockMeetingLinks', 'detectSplitMessages', 'scanAttachments',
+          'warningThreshold', 'tempRestrictionThreshold', 'suspensionReviewThreshold',
+          'tempRestrictionHours', 'approvedExceptions', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'key', 'blockPhoneNumbers', 'blockWhatsApp', 'blockEmails', 'blockUrls',
+          'blockSocialMedia', 'blockMeetingLinks', 'detectSplitMessages', 'scanAttachments',
+          'warningThreshold', 'tempRestrictionThreshold', 'suspensionReviewThreshold',
+          'tempRestrictionHours', 'approvedExceptions', 'updatedAt'
+        ]) &&
+        isStr(data.key, 2, 80) &&
+        data.blockPhoneNumbers is bool &&
+        data.blockWhatsApp is bool &&
+        data.blockEmails is bool &&
+        data.blockUrls is bool &&
+        data.blockSocialMedia is bool &&
+        data.blockMeetingLinks is bool &&
+        data.detectSplitMessages is bool &&
+        data.scanAttachments is bool &&
+        data.warningThreshold is number && data.warningThreshold >= 1 && data.warningThreshold <= 10 &&
+        data.tempRestrictionThreshold is number && data.tempRestrictionThreshold >= 1 && data.tempRestrictionThreshold <= 20 &&
+        data.suspensionReviewThreshold is number && data.suspensionReviewThreshold >= 2 && data.suspensionReviewThreshold <= 50 &&
+        data.tempRestrictionHours is number && data.tempRestrictionHours >= 1 && data.tempRestrictionHours <= 720 &&
+        isBoundedStrList(data.approvedExceptions, 0, 100) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['actorUid', 'actorRole', 'eventType', 'summary', 'createdAt']) &&
+        data.keys().hasOnly(['actorUid', 'actorRole', 'eventType', 'conversationId', 'targetId', 'summary', 'createdAt']) &&
+        isValidId(data.actorUid) &&
+        isStr(data.actorRole, 2, 40) &&
+        isStr(data.eventType, 2, 100) &&
+        (!('conversationId' in data) || isStr(data.conversationId, 0, 128)) &&
+        (!('targetId' in data) || isStr(data.targetId, 0, 128)) &&
+        isStr(data.summary, 2, 500) &&
+        data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // COLLECTION MATCH RULES
+    // =========================================================================
+
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if true;
+      allow create, update: if isValidId(categoryId) &&
+        isAdmin() &&
+        isValidCategory(incoming()) &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidUserAccount(incoming()) &&
+        request.auth.uid == userId &&
+        incoming().uid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().status == 'active' &&
+        (
+          incoming().role in ['parent', 'tutor', 'trainer', 'organization'] ||
+          (incoming().role == 'admin' && isAdmin())
+        );
+      allow update: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidUserAccount(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().role == existing().role &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'city', 'subCity', 'languagePreference', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isValidId(adminId) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming());
+      allow delete: if isValidId(adminId) && isAdmin() && adminId != request.auth.uid;
+    }
+
+    match /tutors/{tutorId} {
+      allow get: if isValidId(tutorId) && (
+        existing().status == 'approved' ||
+        (isSignedIn() && existing().userId == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if resource.data.status == 'approved' ||
+        (isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()));
+      allow create: if isValidId(tutorId) &&
+        isVerifiedUser() &&
+        isValidTutorProfile(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().userId == request.auth.uid &&
+            incoming().status == 'pending' &&
+            incoming().isVerified == false &&
+            incoming().ratingAvg == 0 &&
+            incoming().reviewCount == 0 &&
+            !containsProhibitedContact(incoming().headline) &&
+            !containsProhibitedContact(incoming().bio) &&
+            !containsProhibitedContact(incoming().qualifications)
+          )
+        );
+      allow update: if isValidId(tutorId) &&
+        isVerifiedUser() &&
+        isValidTutorProfile(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().status == existing().status &&
+            incoming().isVerified == existing().isVerified &&
+            incoming().ratingAvg == existing().ratingAvg &&
+            incoming().reviewCount == existing().reviewCount &&
+            !containsProhibitedContact(incoming().headline) &&
+            !containsProhibitedContact(incoming().bio) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'headline', 'bio', 'photoUrl', 'hourlyRateEtb',
+              'availabilityDays', 'subCities', 'languages', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(tutorId) && isAdmin();
+    }
+
+    match /tutor_documents/{docId} {
+      allow get: if isValidId(docId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(docId) &&
+        isVerifiedUser() &&
+        isValidTutorDocument(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          exists(/databases/$(database)/documents/tutors/$(incoming().tutorId)) ||
+          exists(/databases/$(database)/documents/corporate_trainers/$(incoming().tutorId))
+        );
+      allow update: if isValidId(docId) &&
+        isAdmin() &&
+        isValidTutorDocument(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().tutorId == existing().tutorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow get: if isValidId(studentId) && isSignedIn() && (existing().parentId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.parentId == request.auth.uid || isAdmin());
+      allow create: if isValidId(studentId) &&
+        isVerifiedUser() &&
+        isValidStudentProfile(incoming()) &&
+        incoming().parentId == request.auth.uid &&
+        incoming().parentConsent == true &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(studentId) &&
+        isVerifiedUser() &&
+        isValidStudentProfile(incoming()) &&
+        incoming().parentId == existing().parentId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().parentId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName', 'age', 'gradeLevel', 'schoolName',
+              'subjectsNeeded', 'learningGoals', 'preferredSchedule', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(studentId) && isSignedIn() && (existing().parentId == request.auth.uid || isAdmin());
+    }
+
+    match /tutor_requests/{requestId} {
+      allow get: if isValidId(requestId) && isSignedIn() && (existing().parentId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.parentId == request.auth.uid || isAdmin());
+      allow create: if isValidId(requestId) &&
+        isVerifiedUser() &&
+        isValidTutorRequest(incoming()) &&
+        incoming().parentId == request.auth.uid &&
+        incoming().status == 'pending_review' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(requestId) &&
+        isVerifiedUser() &&
+        isValidTutorRequest(incoming()) &&
+        incoming().parentId == existing().parentId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().parentId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+            (
+              (existing().status == 'candidates_proposed' && incoming().status == 'matched') ||
+              (existing().status in ['pending_review', 'candidates_proposed'] && incoming().status == 'cancelled')
+            )
+          )
+        );
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isSignedIn() && (
+        existing().parentId == request.auth.uid ||
+        existing().tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(bookingId) &&
+        isVerifiedUser() &&
+        isValidBooking(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/tutors/$(incoming().tutorId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().parentId == request.auth.uid &&
+            incoming().status == 'pending_tutor' &&
+            incoming().paymentStatus == 'unpaid'
+          )
+        );
+      allow update: if isValidId(bookingId) &&
+        isVerifiedUser() &&
+        isValidBooking(incoming()) &&
+        incoming().parentId == existing().parentId &&
+        incoming().tutorId == existing().tutorId &&
+        incoming().tutorUserId == existing().tutorUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().status != 'completed' &&
+            existing().status != 'cancelled' &&
+            (
+              (
+                existing().tutorUserId == request.auth.uid &&
+                incoming().paymentStatus == existing().paymentStatus &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                (
+                  (existing().status == 'pending_tutor' && incoming().status in ['pending_payment', 'cancelled']) ||
+                  (existing().status == 'confirmed' && incoming().status == 'completed')
+                )
+              ) ||
+              (
+                existing().parentId == request.auth.uid &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentStatus', 'updatedAt']) &&
+                (
+                  (existing().status in ['pending_tutor', 'pending_payment'] && incoming().status == 'cancelled' && incoming().paymentStatus == existing().paymentStatus) ||
+                  (existing().status == 'pending_payment' && existing().paymentStatus == 'unpaid' && incoming().paymentStatus == 'submitted' && incoming().status == existing().status)
+                )
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(bookingId) && isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow get: if isValidId(paymentId) && isSignedIn() && (
+        existing().parentId == request.auth.uid ||
+        existing().tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(paymentId) &&
+        isVerifiedUser() &&
+        isValidPaymentRecord(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().parentId == request.auth.uid &&
+            incoming().status == 'pending_verification'
+          )
+        );
+      allow update: if isValidId(paymentId) &&
+        isAdmin() &&
+        isValidPaymentRecord(incoming()) &&
+        incoming().bookingId == existing().bookingId &&
+        incoming().parentId == existing().parentId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(paymentId) && isAdmin();
+    }
+
+    match /progress_reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && (
+        existing().parentId == request.auth.uid ||
+        existing().tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.parentId == request.auth.uid ||
+        resource.data.tutorUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(reportId) &&
+        isVerifiedUser() &&
+        isValidProgressReport(incoming()) &&
+        incoming().tutorUserId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId));
+      allow update: if isValidId(reportId) &&
+        isVerifiedUser() &&
+        isValidProgressReport(incoming()) &&
+        incoming().bookingId == existing().bookingId &&
+        incoming().parentId == existing().parentId &&
+        incoming().tutorUserId == existing().tutorUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().parentId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['parentComment', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(reportId) && isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId);
+      allow list: if true;
+      allow create: if isValidId(reviewId) &&
+        isVerifiedUser() &&
+        isValidReview(incoming()) &&
+        incoming().parentId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId));
+      allow update, delete: if isValidId(reviewId) && isAdmin();
+    }
+
+    match /support_tickets/{ticketId} {
+      allow get: if isValidId(ticketId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(ticketId) &&
+        isVerifiedUser() &&
+        isValidSupportTicket(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'open' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(ticketId) &&
+        isAdmin() &&
+        isValidSupportTicket(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(ticketId) && isAdmin();
+    }
+
+    match /admin_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(logId) &&
+        isAdmin() &&
+        isValidAdminLog(incoming()) &&
+        incoming().adminUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /platform_settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(settingId) && isAdmin() && isValidPlatformSetting(incoming());
+    }
+
+    // =========================================================================
+    // V1.1 CORPORATE & ORGANIZATIONAL TRAINING MATCH RULES
+    // =========================================================================
+
+    match /organizations/{orgId} {
+      allow get: if isValidId(orgId) && isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(orgId) &&
+        isVerifiedUser() &&
+        isValidOrganization(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid &&
+            incoming().status == 'pending'
+          )
+        );
+      allow update: if isValidId(orgId) &&
+        isVerifiedUser() &&
+        isValidOrganization(incoming()) &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            incoming().status == existing().status &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'orgType', 'industry', 'contactPerson', 'officialEmail',
+              'phone', 'address', 'logoUrl', 'billingInfo', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(orgId) && isAdmin();
+    }
+
+    match /organization_users/{orgUserId} {
+      allow get: if isValidId(orgUserId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(orgUserId) &&
+        isVerifiedUser() &&
+        isValidOrganizationUser(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/organizations/$(incoming().organizationId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().userId == request.auth.uid &&
+            incoming().role == 'owner' &&
+            get(/databases/$(database)/documents/organizations/$(incoming().organizationId)).data.ownerUid == request.auth.uid
+          )
+        );
+      allow update, delete: if isValidId(orgUserId) && isAdmin();
+    }
+
+    match /corporate_requests/{requestId} {
+      allow get: if isValidId(requestId) && isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow create: if isValidId(requestId) &&
+        isVerifiedUser() &&
+        isValidCorporateRequest(incoming()) &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().status == 'pending_review' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/organizations/$(incoming().organizationId));
+      allow update: if isValidId(requestId) &&
+        isVerifiedUser() &&
+        isValidCorporateRequest(incoming()) &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            existing().status == 'proposal_sent' &&
+            incoming().status in ['approved', 'rejected'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    match /corporate_trainers/{trainerId} {
+      allow get: if isValidId(trainerId) && isSignedIn() && (
+        existing().status == 'approved' ||
+        existing().userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.status == 'approved' ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(trainerId) &&
+        isVerifiedUser() &&
+        isValidCorporateTrainer(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().userId == request.auth.uid &&
+            incoming().status == 'pending' &&
+            incoming().isVerified == false &&
+            (!('ratingAvg' in incoming()) || incoming().ratingAvg == 0) &&
+            (!('reviewCount' in incoming()) || incoming().reviewCount == 0) &&
+            !containsProhibitedContact(incoming().headline) &&
+            !containsProhibitedContact(incoming().qualifications) &&
+            !containsProhibitedContact(incoming().methodology) &&
+            (!('bio' in incoming()) || !containsProhibitedContact(incoming().bio)) &&
+            (!('workExperience' in incoming()) || !containsProhibitedContact(incoming().workExperience))
+          )
+        );
+      allow update: if isValidId(trainerId) &&
+        isVerifiedUser() &&
+        isValidCorporateTrainer(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid &&
+            incoming().status == existing().status &&
+            incoming().isVerified == existing().isVerified &&
+            incoming().qualifications == existing().qualifications &&
+            !containsProhibitedContact(incoming().headline) &&
+            !containsProhibitedContact(incoming().methodology) &&
+            (!('bio' in incoming()) || !containsProhibitedContact(incoming().bio)) &&
+            (!('workExperience' in incoming()) || !containsProhibitedContact(incoming().workExperience)) &&
+            (!('pendingQualificationUpdate' in incoming()) || !containsProhibitedContact(incoming().pendingQualificationUpdate)) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'headline', 'bio', 'photoUrl', 'workExperience', 'pastProjects',
+              'methodology', 'availability', 'preferredLocations', 'languages',
+              'proposedDailyRateEtb', 'pendingQualificationUpdate', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(trainerId) && isAdmin();
+    }
+
+    match /trainer_portfolio_items/{itemId} {
+      allow get: if isValidId(itemId) && isSignedIn() && (
+        existing().status == 'approved' ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.status == 'approved' ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(itemId) &&
+        isVerifiedUser() &&
+        isValidTrainerPortfolioItem(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/corporate_trainers/$(incoming().trainerId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().trainerUserId == request.auth.uid &&
+            incoming().status == 'pending' &&
+            !containsProhibitedContact(incoming().title) &&
+            !containsProhibitedContact(incoming().summary) &&
+            (!('outcomeMetrics' in incoming()) || !containsProhibitedContact(incoming().outcomeMetrics))
+          )
+        );
+      allow update: if isValidId(itemId) &&
+        isAdmin() &&
+        isValidTrainerPortfolioItem(incoming()) &&
+        incoming().trainerId == existing().trainerId &&
+        incoming().trainerUserId == existing().trainerUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(itemId) && isSignedIn() && (
+        existing().trainerUserId == request.auth.uid || isAdmin()
+      );
+    }
+
+    match /saved_trainers/{savedId} {
+      allow get: if isValidId(savedId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(savedId) &&
+        isVerifiedUser() &&
+        isValidSavedTrainer(incoming()) &&
+        incoming().organizationOwnerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/organizations/$(incoming().organizationId)) &&
+        exists(/databases/$(database)/documents/corporate_trainers/$(incoming().trainerId));
+      allow update: if isValidId(savedId) &&
+        isVerifiedUser() &&
+        isValidSavedTrainer(incoming()) &&
+        existing().organizationOwnerUid == request.auth.uid &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().trainerId == existing().trainerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'updatedAt']);
+      allow delete: if isValidId(savedId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+    }
+
+    match /trainer_selection_requests/{selectionId} {
+      allow get: if isValidId(selectionId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(selectionId) &&
+        isVerifiedUser() &&
+        isValidTrainerSelectionRequest(incoming()) &&
+        incoming().organizationOwnerUid == request.auth.uid &&
+        incoming().status == 'pending_tutorbridge_review' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/organizations/$(incoming().organizationId)) &&
+        exists(/databases/$(database)/documents/corporate_trainers/$(incoming().selectedTrainerId));
+      allow update: if isValidId(selectionId) &&
+        isAdmin() &&
+        isValidTrainerSelectionRequest(incoming()) &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(selectionId) && isAdmin();
+    }
+
+    match /corporate_negotiations/{negId} {
+      allow get: if isValidId(negId) && isSignedIn() && (
+        isAdmin() ||
+        (existing().targetType == 'organization_quote' && 'organizationOwnerUid' in existing() && existing().organizationOwnerUid == request.auth.uid) ||
+        (existing().targetType == 'trainer_compensation' && 'trainerUserId' in existing() && existing().trainerUserId == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.targetType == 'organization_quote' && resource.data.organizationOwnerUid == request.auth.uid) ||
+        (resource.data.targetType == 'trainer_compensation' && resource.data.trainerUserId == request.auth.uid)
+      );
+      allow create: if isValidId(negId) &&
+        isAdmin() &&
+        isValidCorporateNegotiation(incoming()) &&
+        incoming().adminUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(negId) &&
+        isAdmin() &&
+        isValidCorporateNegotiation(incoming()) &&
+        incoming().targetType == existing().targetType &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(negId) && isAdmin();
+    }
+
+    match /training_proposals/{proposalId} {
+      allow get: if isValidId(proposalId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(proposalId) &&
+        isAdmin() &&
+        isValidTrainingProposal(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/corporate_requests/$(incoming().requestId));
+      allow update: if isValidId(proposalId) &&
+        isVerifiedUser() &&
+        isValidTrainingProposal(incoming()) &&
+        incoming().requestId == existing().requestId &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().trainerId == existing().trainerId &&
+        incoming().trainerUserId == existing().trainerUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().trainerUserId == request.auth.uid &&
+            existing().status == 'proposed' &&
+            incoming().status in ['accepted_by_trainer', 'declined_by_trainer'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'trainerResponseNotes', 'updatedAt'])
+          ) ||
+          (
+            existing().organizationOwnerUid == request.auth.uid &&
+            existing().status == 'accepted_by_trainer' &&
+            incoming().status in ['approved_by_org', 'rejected_by_org'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(proposalId) && isAdmin();
+    }
+
+    match /training_quotations/{quotationId} {
+      allow get: if isValidId(quotationId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(quotationId) &&
+        isAdmin() &&
+        isValidTrainingQuotation(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/corporate_requests/$(incoming().requestId));
+      allow update: if isValidId(quotationId) &&
+        isVerifiedUser() &&
+        isValidTrainingQuotation(incoming()) &&
+        incoming().requestId == existing().requestId &&
+        incoming().proposalId == existing().proposalId &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().organizationOwnerUid == request.auth.uid &&
+            existing().status == 'sent' &&
+            incoming().status in ['approved', 'rejected'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(quotationId) && isAdmin();
+    }
+
+    match /training_contracts/{contractId} {
+      allow get: if isValidId(contractId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(contractId) &&
+        isVerifiedUser() &&
+        isValidTrainingContract(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_quotations/$(incoming().quotationId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().organizationOwnerUid == request.auth.uid &&
+            incoming().status == 'active'
+          )
+        );
+      allow update: if isValidId(contractId) &&
+        isVerifiedUser() &&
+        isValidTrainingContract(incoming()) &&
+        incoming().requestId == existing().requestId &&
+        incoming().quotationId == existing().quotationId &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().organizationOwnerUid == request.auth.uid &&
+            incoming().status == existing().status &&
+            incoming().trainerId == existing().trainerId &&
+            incoming().trainerUserId == existing().trainerUserId &&
+            incoming().totalAmountEtb == existing().totalAmountEtb &&
+            incoming().trainerCompensationEtb == existing().trainerCompensationEtb &&
+            incoming().serviceFeeEtb == existing().serviceFeeEtb &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'orgAcceptedAt', 'orgAcceptedByName', 'orgAcceptedRole', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(contractId) && isAdmin();
+    }
+
+    match /trainer_assignment_agreements/{agreementId} {
+      allow get: if isValidId(agreementId) && isSignedIn() && (
+        existing().trainerUserId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.trainerUserId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(agreementId) &&
+        isAdmin() &&
+        isValidTrainerAssignmentAgreement(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId));
+      allow update: if isValidId(agreementId) &&
+        isVerifiedUser() &&
+        isValidTrainerAssignmentAgreement(incoming()) &&
+        incoming().contractId == existing().contractId &&
+        incoming().requestId == existing().requestId &&
+        incoming().trainerId == existing().trainerId &&
+        incoming().trainerUserId == existing().trainerUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().trainerUserId == request.auth.uid &&
+            existing().status == 'pending_acceptance' &&
+            incoming().status == 'active' &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'trainerAcceptedAt', 'trainerAcceptedName', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(agreementId) && isAdmin();
+    }
+
+    match /trainer_compensation_records/{recordId} {
+      allow get: if isValidId(recordId) && isSignedIn() && (
+        existing().trainerUserId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.trainerUserId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(recordId) &&
+        isAdmin() &&
+        isValidTrainerCompensationRecord(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/trainer_assignment_agreements/$(incoming().agreementId));
+      allow update: if isValidId(recordId) &&
+        isAdmin() &&
+        isValidTrainerCompensationRecord(incoming()) &&
+        incoming().agreementId == existing().agreementId &&
+        incoming().contractId == existing().contractId &&
+        incoming().trainerId == existing().trainerId &&
+        incoming().trainerUserId == existing().trainerUserId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(recordId) && isAdmin();
+    }
+
+    match /corporate_refunds/{refundId} {
+      allow get: if isValidId(refundId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(refundId) &&
+        isVerifiedUser() &&
+        isValidCorporateRefundRecord(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().organizationOwnerUid == request.auth.uid &&
+            incoming().status == 'requested'
+          )
+        );
+      allow update: if isValidId(refundId) &&
+        isAdmin() &&
+        isValidCorporateRefundRecord(incoming()) &&
+        incoming().contractId == existing().contractId &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(refundId) && isAdmin();
+    }
+
+    match /training_schedules/{scheduleId} {
+      allow get: if isValidId(scheduleId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(scheduleId) &&
+        isAdmin() &&
+        isValidTrainingSchedule(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId));
+      allow update: if isValidId(scheduleId) &&
+        isAdmin() &&
+        isValidTrainingSchedule(incoming()) &&
+        incoming().contractId == existing().contractId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(scheduleId) && isAdmin();
+    }
+
+    match /training_participants/{participantId} {
+      allow get: if isValidId(participantId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(participantId) &&
+        isVerifiedUser() &&
+        isValidTrainingParticipant(incoming()) &&
+        incoming().organizationOwnerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId));
+      allow update: if isValidId(participantId) &&
+        isVerifiedUser() &&
+        isValidTrainingParticipant(incoming()) &&
+        incoming().contractId == existing().contractId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (isAdmin() || existing().organizationOwnerUid == request.auth.uid);
+      allow delete: if isValidId(participantId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid || isAdmin()
+      );
+    }
+
+    match /training_attendance/{attendanceId} {
+      allow get: if isValidId(attendanceId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(attendanceId) &&
+        isVerifiedUser() &&
+        isValidTrainingAttendance(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId)) &&
+        (isAdmin() || incoming().trainerUserId == request.auth.uid);
+      allow update, delete: if isValidId(attendanceId) && isAdmin();
+    }
+
+    match /training_reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        existing().trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        resource.data.trainerUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(reportId) &&
+        isVerifiedUser() &&
+        isValidTrainingReport(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId)) &&
+        (isAdmin() || incoming().trainerUserId == request.auth.uid);
+      allow update, delete: if isValidId(reportId) && isAdmin();
+    }
+
+    match /corporate_invoices/{invoiceId} {
+      allow get: if isValidId(invoiceId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(invoiceId) &&
+        isVerifiedUser() &&
+        isValidCorporateInvoice(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId)) &&
+        (
+          isAdmin() ||
+          (
+            incoming().organizationOwnerUid == request.auth.uid &&
+            incoming().status == 'unpaid'
+          )
+        );
+      allow update: if isValidId(invoiceId) &&
+        isVerifiedUser() &&
+        isValidCorporateInvoice(incoming()) &&
+        incoming().contractId == existing().contractId &&
+        incoming().organizationId == existing().organizationId &&
+        incoming().organizationOwnerUid == existing().organizationOwnerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().organizationOwnerUid == request.auth.uid &&
+            existing().status == 'unpaid' &&
+            incoming().status == 'payment_submitted' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['paymentMethod', 'transactionRef', 'status', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(invoiceId) && isAdmin();
+    }
+
+    match /corporate_feedback/{feedbackId} {
+      allow get: if isValidId(feedbackId) && isSignedIn() && (
+        existing().organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.organizationOwnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isValidId(feedbackId) &&
+        isVerifiedUser() &&
+        isValidCorporateFeedback(incoming()) &&
+        incoming().organizationOwnerUid == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/training_contracts/$(incoming().contractId));
+      allow update, delete: if isValidId(feedbackId) && isAdmin();
+    }
+
+    // =========================================================================
+    // CONTACT PROTECTION & PROTECTED MESSAGING MATCH RULES
+    // =========================================================================
+
+    match /conversations/{conversationId} {
+      allow get: if isValidId(conversationId) && isSignedIn() && (
+        (request.auth.uid in existing().participantUids) || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        (request.auth.uid in resource.data.participantUids) || isAdmin()
+      );
+      allow create: if isValidId(conversationId) &&
+        isVerifiedUser() &&
+        isValidConversation(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().conversationType != 'organization_trainer' &&
+        (
+          incoming().conversationType != 'admin_user' || isAdmin()
+        ) &&
+        (
+          incoming().conversationType != 'student_tutor' ||
+          (
+            'guardianUid' in incoming() &&
+            isValidId(incoming().guardianUid) &&
+            (incoming().guardianUid in incoming().participantUids)
+          )
+        ) &&
+        (
+          isAdmin() ||
+          (
+            incoming().createdByUid == request.auth.uid &&
+            (request.auth.uid in incoming().participantUids) &&
+            incoming().status == 'active'
+          )
+        );
+      allow update: if isValidId(conversationId) &&
+        isVerifiedUser() &&
+        isValidConversation(incoming()) &&
+        incoming().conversationType == existing().conversationType &&
+        incoming().participantUids == existing().participantUids &&
+        incoming().createdByUid == existing().createdByUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            (request.auth.uid in existing().participantUids) &&
+            existing().conversationType != 'organization_trainer' &&
+            existing().status != 'locked' &&
+            incoming().status in ['active', 'flagged'] &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'lastMessagePreview', 'lastSenderUid', 'unreadByUids', 'status', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if isValidId(conversationId) && isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow get: if isValidId(messageId) && isSignedIn() && (
+        (request.auth.uid in existing().participantUids) || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        (request.auth.uid in resource.data.participantUids) || isAdmin()
+      );
+      allow create: if isValidId(messageId) &&
+        isVerifiedUser() &&
+        isValidMessage(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/conversations/$(incoming().conversationId)) &&
+        get(/databases/$(database)/documents/conversations/$(incoming().conversationId)).data.conversationType != 'organization_trainer' &&
+        (
+          isAdmin() ||
+          (
+            incoming().senderUid == request.auth.uid &&
+            (request.auth.uid in incoming().participantUids) &&
+            incoming().moderationStatus in ['approved', 'flagged'] &&
+            !containsProhibitedContact(incoming().text) &&
+            isNotRestrictedFromMessaging() &&
+            get(/databases/$(database)/documents/conversations/$(incoming().conversationId)).data.status != 'locked' &&
+            (request.auth.uid in get(/databases/$(database)/documents/conversations/$(incoming().conversationId)).data.participantUids)
+          )
+        );
+      allow update: if isValidId(messageId) &&
+        isVerifiedUser() &&
+        isValidMessage(incoming()) &&
+        incoming().conversationId == existing().conversationId &&
+        incoming().participantUids == existing().participantUids &&
+        incoming().senderUid == existing().senderUid &&
+        incoming().text == existing().text &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            (request.auth.uid in existing().participantUids) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['readByUids', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    match /message_reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && (
+        existing().reporterUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.reporterUid == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(reportId) &&
+        isVerifiedUser() &&
+        isValidMessageReport(incoming()) &&
+        incoming().reporterUid == request.auth.uid &&
+        incoming().status == 'open' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        exists(/databases/$(database)/documents/conversations/$(incoming().conversationId));
+      allow update: if isValidId(reportId) &&
+        isAdmin() &&
+        isValidMessageReport(incoming()) &&
+        incoming().conversationId == existing().conversationId &&
+        incoming().messageId == existing().messageId &&
+        incoming().reporterUid == existing().reporterUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(reportId) && isAdmin();
+    }
+
+    match /moderation_flags/{flagId} {
+      allow get: if isValidId(flagId) && isSignedIn() && (
+        existing().userId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(flagId) &&
+        isVerifiedUser() &&
+        isValidModerationFlag(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().userId == request.auth.uid &&
+            incoming().reviewStatus == 'pending'
+          )
+        );
+      allow update: if isValidId(flagId) &&
+        isAdmin() &&
+        isValidModerationFlag(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().conversationId == existing().conversationId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(flagId) && isAdmin();
+    }
+
+    match /user_violations/{violationId} {
+      allow get: if isValidId(violationId) && isSignedIn() && (
+        existing().userId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(violationId) &&
+        isVerifiedUser() &&
+        isValidUserViolation(incoming()) &&
+        incoming().createdAt == request.time &&
+        (
+          isAdmin() ||
+          incoming().userId == request.auth.uid
+        );
+      allow update, delete: if false;
+    }
+
+    match /messaging_restrictions/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (
+        request.auth.uid == userId || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidMessagingRestriction(incoming()) &&
+        incoming().userId == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().violationCount >= 1 &&
+            incoming().appealStatus == 'none'
+          )
+        );
+      allow update: if isValidId(userId) &&
+        isVerifiedUser() &&
+        isValidMessagingRestriction(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            (
+              (
+                incoming().diff(existing()).affectedKeys().hasOnly(['appealText', 'appealStatus', 'updatedAt']) &&
+                incoming().appealStatus == 'pending'
+              ) ||
+              (
+                incoming().violationCount > existing().violationCount &&
+                incoming().status == 'active' &&
+                incoming().restrictionLevel in ['warning', 'temp_restricted', 'suspended_review'] &&
+                incoming().appealStatus == existing().appealStatus
+              )
+            )
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    match /moderation_actions/{actionId} {
+      allow get: if isValidId(actionId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(actionId) &&
+        isAdmin() &&
+        isValidModerationAction(incoming()) &&
+        incoming().adminUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /platform_moderation_settings/{settingId} {
+      allow get: if isValidId(settingId) && isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update, delete: if isValidId(settingId) &&
+        isAdmin() &&
+        isValidPlatformModerationSetting(incoming());
+    }
+
+    match /audit_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(logId) &&
+        isVerifiedUser() &&
+        isValidAuditLog(incoming()) &&
+        incoming().createdAt == request.time &&
+        (
+          isAdmin() ||
+          incoming().actorUid == request.auth.uid
+        );
+      allow update, delete: if false;
+    }
+  }
+}

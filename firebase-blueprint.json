@@ -1,0 +1,903 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "Private user account profile containing role and contact PII.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["parent", "tutor", "trainer", "organization", "admin"] },
+        "phone": { "type": "string", "maxLength": 40 },
+        "city": { "type": "string", "maxLength": 80 },
+        "subCity": { "type": "string", "maxLength": 80 },
+        "languagePreference": { "type": "string", "enum": ["en", "am"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "fullName", "role", "status", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Privileged administrator authorization record.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 200 },
+        "grantedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "grantedAt"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Admin-managed training or tutoring category.",
+      "type": "object",
+      "properties": {
+        "division": { "type": "string", "maxLength": 100 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "topics": { "type": "array" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["division", "name", "topics", "isActive", "createdAt", "updatedAt"]
+    },
+    "TutorProfile": {
+      "title": "TutorProfile",
+      "description": "Publicly discoverable verified tutor profile (contains no sensitive PII).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "headline": { "type": "string", "minLength": 4, "maxLength": 160 },
+        "bio": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "qualifications": { "type": "string", "minLength": 2, "maxLength": 300 },
+        "experienceYears": { "type": "number" },
+        "division": { "type": "string", "enum": ["Academic Tutoring", "Languages & Personal Development", "Professional & Practical Skills"] },
+        "subjects": { "type": "array" },
+        "grades": { "type": "array" },
+        "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "subCities": { "type": "array" },
+        "hourlyRateEtb": { "type": "number" },
+        "availabilityDays": { "type": "array" },
+        "languages": { "type": "array" },
+        "ratingAvg": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "suspended"] },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fullName", "headline", "bio", "qualifications", "experienceYears", "division", "subjects", "grades", "city", "subCities", "hourlyRateEtb", "availabilityDays", "languages", "ratingAvg", "reviewCount", "status", "isVerified", "createdAt", "updatedAt"]
+    },
+    "TutorDocument": {
+      "title": "TutorDocument",
+      "description": "Private tutor/trainer verification credential and ID record.",
+      "type": "object",
+      "properties": {
+        "tutorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "docType": { "type": "string", "enum": ["national_id", "degree_certificate", "teaching_license", "reference_letter"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "referenceCode": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["pending", "verified", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["tutorId", "userId", "docType", "title", "referenceCode", "status", "createdAt", "updatedAt"]
+    },
+    "StudentProfile": {
+      "title": "StudentProfile",
+      "description": "Child or learner profile managed by a parent account.",
+      "type": "object",
+      "properties": {
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "age": { "type": "number" },
+        "gradeLevel": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "schoolName": { "type": "string", "maxLength": 120 },
+        "subjectsNeeded": { "type": "array" },
+        "learningGoals": { "type": "string", "maxLength": 600 },
+        "preferredSchedule": { "type": "string", "maxLength": 200 },
+        "parentConsent": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["parentId", "fullName", "age", "gradeLevel", "subjectsNeeded", "parentConsent", "createdAt", "updatedAt"]
+    },
+    "TutorRequest": {
+      "title": "TutorRequest",
+      "description": "Managed tutor matching request submitted by a family or learner.",
+      "type": "object",
+      "properties": {
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "gradeLevel": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "division": { "type": "string", "enum": ["Academic Tutoring", "Languages & Personal Development", "Professional & Practical Skills"] },
+        "subjects": { "type": "array" },
+        "city": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "subCity": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "preferredSchedule": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "budgetMaxEtb": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["pending_review", "candidates_proposed", "matched", "cancelled"] },
+        "proposedTutorId": { "type": "string", "maxLength": 128 },
+        "proposedTutorName": { "type": "string", "maxLength": 120 },
+        "adminNotes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["parentId", "parentName", "studentName", "gradeLevel", "division", "subjects", "city", "subCity", "preferredSchedule", "budgetMaxEtb", "status", "createdAt", "updatedAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Tutoring session booking connecting a family, student, and verified tutor.",
+      "type": "object",
+      "properties": {
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "tutorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "sessionCount": { "type": "number" },
+        "ratePerSessionEtb": { "type": "number" },
+        "totalAmountEtb": { "type": "number" },
+        "commissionRate": { "type": "number" },
+        "commissionAmountEtb": { "type": "number" },
+        "tutorPayoutEtb": { "type": "number" },
+        "locationNeighborhood": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "scheduleSummary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "status": { "type": "string", "enum": ["pending_tutor", "pending_payment", "confirmed", "completed", "cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["unpaid", "submitted", "verified", "refunded"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["parentId", "parentName", "studentName", "tutorId", "tutorUserId", "tutorName", "subject", "sessionCount", "ratePerSessionEtb", "totalAmountEtb", "commissionRate", "commissionAmountEtb", "tutorPayoutEtb", "locationNeighborhood", "scheduleSummary", "status", "paymentStatus", "createdAt", "updatedAt"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Manual payment verification record for Telebirr, CBE Birr, or Bank Transfer.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "method": { "type": "string", "enum": ["Telebirr", "CBE Birr", "Bank Transfer"] },
+        "transactionRef": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "amountEtb": { "type": "number" },
+        "commissionEtb": { "type": "number" },
+        "tutorPayoutEtb": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending_verification", "verified", "rejected", "refunded"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookingId", "parentId", "tutorId", "tutorUserId", "method", "transactionRef", "amountEtb", "commissionEtb", "tutorPayoutEtb", "status", "createdAt", "updatedAt"]
+    },
+    "ProgressReport": {
+      "title": "ProgressReport",
+      "description": "Tutor session attendance and learning progress report.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "sessionDate": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "attendanceStatus": { "type": "string", "enum": ["present", "absent", "rescheduled"] },
+        "summary": { "type": "string", "minLength": 4, "maxLength": 1000 },
+        "parentComment": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookingId", "parentId", "tutorId", "tutorUserId", "tutorName", "studentName", "subject", "sessionDate", "attendanceStatus", "summary", "createdAt", "updatedAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Public parent/learner review of a verified tutor.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "tutorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "parentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "minLength": 4, "maxLength": 800 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookingId", "tutorId", "parentId", "authorName", "rating", "comment", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Family or organization support, rescheduling, or safeguarding incident report.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "enum": ["general", "payment", "reschedule", "safeguarding", "corporate"] },
+        "subject": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "status": { "type": "string", "enum": ["open", "in_review", "resolved"] },
+        "adminResponse": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "category", "subject", "message", "status", "createdAt", "updatedAt"]
+    },
+    "AdminLog": {
+      "title": "AdminLog",
+      "description": "Immutable administrative audit log entry.",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "action": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "targetCollection": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "targetId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminUid", "action", "targetCollection", "targetId", "createdAt"]
+    },
+    "PlatformSetting": {
+      "title": "PlatformSetting",
+      "description": "Platform configuration including commission rate.",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "commissionRate": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["key", "updatedAt"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "Corporate or institutional client profile.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "orgType": { "type": "string", "enum": ["Private Company", "NGO", "Government Institution", "School / University", "Development Organization", "SME", "Other"] },
+        "industry": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "contactPerson": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "officialEmail": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "phone": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "address": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "logoUrl": { "type": "string", "maxLength": 500 },
+        "billingInfo": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["pending", "approved", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "name", "orgType", "industry", "contactPerson", "officialEmail", "phone", "address", "status", "createdAt", "updatedAt"]
+    },
+    "OrganizationUser": {
+      "title": "OrganizationUser",
+      "description": "Membership mapping users to an organization.",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "role": { "type": "string", "enum": ["owner", "coordinator", "viewer"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "userId", "role", "createdAt", "updatedAt"]
+    },
+    "CorporateRequest": {
+      "title": "CorporateRequest",
+      "description": "Corporate training request submitted by an organization.",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "topics": { "type": "array" },
+        "objectives": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "participantCount": { "type": "number" },
+        "preferredDates": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "duration": { "type": "string", "enum": ["One day", "Two to three days", "One week", "Several weeks", "Monthly / Customized"] },
+        "location": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "budgetMinEtb": { "type": "number" },
+        "budgetMaxEtb": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending_review", "trainers_sourced", "proposal_sent", "approved", "in_progress", "completed", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "ownerUid", "organizationName", "category", "topics", "objectives", "participantCount", "preferredDates", "duration", "location", "budgetMinEtb", "budgetMaxEtb", "status", "createdAt", "updatedAt"]
+    },
+    "CorporateTrainer": {
+      "title": "CorporateTrainer",
+      "description": "Verified professional corporate trainer directory profile (no private contact PII).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "headline": { "type": "string", "minLength": 4, "maxLength": 160 },
+        "bio": { "type": "string", "maxLength": 2000 },
+        "photoUrl": { "type": "string", "maxLength": 500 },
+        "qualifications": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "certifications": { "type": "array" },
+        "workExperience": { "type": "string", "maxLength": 1500 },
+        "experienceYears": { "type": "number" },
+        "categories": { "type": "array" },
+        "topics": { "type": "array" },
+        "pastProjects": { "type": "array" },
+        "portfolioSamples": { "type": "array" },
+        "methodology": { "type": "string", "minLength": 10, "maxLength": 1500 },
+        "availability": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "preferredLocations": { "type": "array" },
+        "languages": { "type": "array" },
+        "ratingAvg": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "proposedDailyRateEtb": { "type": "number" },
+        "isTutorAlso": { "type": "boolean" },
+        "pendingQualificationUpdate": { "type": "string", "maxLength": 600 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "suspended"] },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "fullName", "headline", "qualifications", "experienceYears", "categories", "topics", "methodology", "availability", "preferredLocations", "proposedDailyRateEtb", "isTutorAlso", "status", "isVerified", "createdAt", "updatedAt"]
+    },
+    "TrainerPortfolioItem": {
+      "title": "TrainerPortfolioItem",
+      "description": "Trainer-uploaded portfolio sample or curriculum deliverable subject to administrator approval.",
+      "type": "object",
+      "properties": {
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "outcomeMetrics": { "type": "string", "maxLength": 400 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "adminNotes": { "type": "string", "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["trainerId", "trainerUserId", "title", "category", "summary", "status", "createdAt", "updatedAt"]
+    },
+    "SavedTrainer": {
+      "title": "SavedTrainer",
+      "description": "Organization bookmark of a preferred approved corporate trainer.",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "organizationOwnerUid", "trainerId", "createdAt", "updatedAt"]
+    },
+    "TrainerSelectionRequest": {
+      "title": "TrainerSelectionRequest",
+      "description": "Organization-submitted single or ranked multi-trainer preference request routed exclusively through TutorBridge Administrators.",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "corporateRequestId": { "type": "string", "maxLength": 128 },
+        "selectedTrainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "selectedTrainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "selectedTrainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "rankedTrainerIds": { "type": "array" },
+        "rankedTrainerNames": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["pending_tutorbridge_review", "in_coordination", "approved", "alternative_suggested", "rejected"] },
+        "suggestedTrainerId": { "type": "string", "maxLength": 128 },
+        "suggestedTrainerName": { "type": "string", "maxLength": 120 },
+        "adminNotes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "organizationOwnerUid", "organizationName", "selectedTrainerId", "selectedTrainerUserId", "selectedTrainerName", "rankedTrainerIds", "rankedTrainerNames", "status", "createdAt", "updatedAt"]
+    },
+    "CorporateNegotiation": {
+      "title": "CorporateNegotiation",
+      "description": "Strict intermediary-isolated commercial negotiation log (organization quotes isolated from trainer compensation negotiations).",
+      "type": "object",
+      "properties": {
+        "targetType": { "type": "string", "enum": ["organization_quote", "trainer_compensation"] },
+        "requestId": { "type": "string", "maxLength": 128 },
+        "selectionRequestId": { "type": "string", "maxLength": 128 },
+        "organizationOwnerUid": { "type": "string", "maxLength": 128 },
+        "trainerUserId": { "type": "string", "maxLength": 128 },
+        "participantLabel": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "proposedAmountEtb": { "type": "number" },
+        "proposedTerms": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "notes": { "type": "string", "maxLength": 600 },
+        "status": { "type": "string", "enum": ["open", "agreed", "superseded"] },
+        "adminUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetType", "participantLabel", "proposedAmountEtb", "proposedTerms", "status", "adminUid", "createdAt", "updatedAt"]
+    },
+    "TrainingProposal": {
+      "title": "TrainingProposal",
+      "description": "Trainer assignment proposal linking a corporate request and verified trainer.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "trainerQualifications": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "trainerMethodology": { "type": "string", "minLength": 4, "maxLength": 1500 },
+        "proposedSchedule": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "status": { "type": "string", "enum": ["proposed", "accepted_by_trainer", "declined_by_trainer", "approved_by_org", "rejected_by_org"] },
+        "trainerResponseNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "organizationId", "organizationOwnerUid", "trainerId", "trainerUserId", "trainerName", "trainerQualifications", "trainerMethodology", "proposedSchedule", "status", "createdAt", "updatedAt"]
+    },
+    "TrainingQuotation": {
+      "title": "TrainingQuotation",
+      "description": "Itemized corporate training quotation for organizational review (trainer private payouts kept separate).",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "proposalId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerCompensationEtb": { "type": "number" },
+        "logisticalExpensesEtb": { "type": "number" },
+        "serviceFeeEtb": { "type": "number" },
+        "coordinationFeeEtb": { "type": "number" },
+        "additionalChargesEtb": { "type": "number" },
+        "totalAmountEtb": { "type": "number" },
+        "paymentTerms": { "type": "string", "maxLength": 400 },
+        "cancellationTerms": { "type": "string", "maxLength": 600 },
+        "validityDays": { "type": "number" },
+        "pricingNotes": { "type": "string", "maxLength": 600 },
+        "status": { "type": "string", "enum": ["sent", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "proposalId", "organizationId", "organizationOwnerUid", "trainerCompensationEtb", "logisticalExpensesEtb", "serviceFeeEtb", "totalAmountEtb", "status", "createdAt", "updatedAt"]
+    },
+    "TrainingContract": {
+      "title": "TrainingContract",
+      "description": "Managed Service Agreement between Organization and TutorBridge Ethiopia governed under Ethiopian law.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "quotationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "agreementNumber": { "type": "string", "maxLength": 80 },
+        "totalAmountEtb": { "type": "number" },
+        "trainerCompensationEtb": { "type": "number" },
+        "serviceFeeEtb": { "type": "number" },
+        "paymentTerms": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "serviceTermsSummary": { "type": "string", "maxLength": 1500 },
+        "cancellationTerms": { "type": "string", "maxLength": 600 },
+        "governingLawClause": { "type": "string", "maxLength": 600 },
+        "orgAcceptedAt": { "type": "string", "maxLength": 60 },
+        "orgAcceptedByName": { "type": "string", "maxLength": 120 },
+        "orgAcceptedRole": { "type": "string", "maxLength": 120 },
+        "replacementHistory": { "type": "array" },
+        "status": { "type": "string", "enum": ["active", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "quotationId", "organizationId", "organizationOwnerUid", "organizationName", "trainerId", "trainerUserId", "trainerName", "title", "totalAmountEtb", "trainerCompensationEtb", "serviceFeeEtb", "paymentTerms", "status", "createdAt", "updatedAt"]
+    },
+    "TrainerAssignmentAgreement": {
+      "title": "TrainerAssignmentAgreement",
+      "description": "Separate trainer assignment agreement strictly between TutorBridge Ethiopia and the assigned corporate trainer (never readable by organizations).",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "organizationLabel": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "scopeOfWork": { "type": "string", "minLength": 4, "maxLength": 1500 },
+        "scheduleSummary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "trainerCompensationEtb": { "type": "number" },
+        "paymentSchedule": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "cancellationTerms": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "governingLawClause": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "trainerAcceptedAt": { "type": "string", "maxLength": 60 },
+        "trainerAcceptedName": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["pending_acceptance", "active", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "requestId", "trainerId", "trainerUserId", "trainerName", "organizationLabel", "title", "scopeOfWork", "scheduleSummary", "trainerCompensationEtb", "paymentSchedule", "cancellationTerms", "governingLawClause", "status", "createdAt", "updatedAt"]
+    },
+    "TrainerCompensationRecord": {
+      "title": "TrainerCompensationRecord",
+      "description": "Confidential payout ledger recording TutorBridge disbursements to assigned corporate trainers.",
+      "type": "object",
+      "properties": {
+        "agreementId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "amountEtb": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["Telebirr", "CBE Birr", "Bank Transfer"] },
+        "transactionRef": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "status": { "type": "string", "enum": ["scheduled", "paid", "withheld", "cancelled"] },
+        "paidDate": { "type": "string", "maxLength": 60 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["agreementId", "contractId", "trainerId", "trainerUserId", "trainerName", "amountEtb", "paymentMethod", "transactionRef", "status", "createdAt", "updatedAt"]
+    },
+    "CorporateRefundRecord": {
+      "title": "CorporateRefundRecord",
+      "description": "Cancellation and refund settlement record between an Organization and TutorBridge.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "invoiceId": { "type": "string", "maxLength": 128 },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "refundAmountEtb": { "type": "number" },
+        "cancellationFeeEtb": { "type": "number" },
+        "reason": { "type": "string", "minLength": 4, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["requested", "approved", "processed", "rejected"] },
+        "processedRef": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "organizationName", "refundAmountEtb", "cancellationFeeEtb", "reason", "status", "createdAt", "updatedAt"]
+    },
+    "TrainingSchedule": {
+      "title": "TrainingSchedule",
+      "description": "Scheduled corporate training session.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sessionTitle": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "sessionDate": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "timeRange": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "venue": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "status": { "type": "string", "enum": ["scheduled", "completed", "rescheduled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "trainerUserId", "sessionTitle", "sessionDate", "timeRange", "venue", "status", "createdAt", "updatedAt"]
+    },
+    "TrainingParticipant": {
+      "title": "TrainingParticipant",
+      "description": "Organization staff participant enrolled in a corporate training contract.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "department": { "type": "string", "maxLength": 120 },
+        "email": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "fullName", "createdAt", "updatedAt"]
+    },
+    "TrainingAttendance": {
+      "title": "TrainingAttendance",
+      "description": "Session attendance log for a corporate training contract.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sessionDate": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "presentCount": { "type": "number" },
+        "totalParticipants": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "trainerUserId", "sessionDate", "presentCount", "totalParticipants", "createdAt", "updatedAt"]
+    },
+    "TrainingReport": {
+      "title": "TrainingReport",
+      "description": "Corporate training completion report.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "organizationName": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "summary": { "type": "string", "minLength": 5, "maxLength": 1500 },
+        "outcomesAchieved": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "attendanceRatePct": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "trainerUserId", "trainerName", "organizationName", "summary", "outcomesAchieved", "attendanceRatePct", "createdAt", "updatedAt"]
+    },
+    "CorporateInvoice": {
+      "title": "CorporateInvoice",
+      "description": "Corporate billing invoice and payment receipt record.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "invoiceNumber": { "type": "string", "minLength": 3, "maxLength": 60 },
+        "amountEtb": { "type": "number" },
+        "trainerCompensationEtb": { "type": "number" },
+        "serviceFeeEtb": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 60 },
+        "transactionRef": { "type": "string", "maxLength": 120 },
+        "status": { "type": "string", "enum": ["unpaid", "payment_submitted", "paid", "refunded"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "invoiceNumber", "amountEtb", "trainerCompensationEtb", "serviceFeeEtb", "status", "createdAt", "updatedAt"]
+    },
+    "CorporateFeedback": {
+      "title": "CorporateFeedback",
+      "description": "Organization evaluation and feedback for completed corporate training.",
+      "type": "object",
+      "properties": {
+        "contractId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "organizationOwnerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "trainerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string", "minLength": 4, "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contractId", "organizationId", "organizationOwnerUid", "trainerId", "rating", "comment", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Protected internal communication thread between platform participants.",
+      "type": "object",
+      "properties": {
+        "conversationType": { "type": "string", "enum": ["parent_tutor", "student_tutor", "organization_trainer", "client_support", "admin_user"] },
+        "participantUids": { "type": "array" },
+        "participantSummary": { "type": "string", "minLength": 2, "maxLength": 240 },
+        "guardianUid": { "type": "string", "maxLength": 128 },
+        "relatedType": { "type": "string", "enum": ["booking", "tutor_request", "corporate_request", "corporate_contract", "support", "general"] },
+        "relatedId": { "type": "string", "maxLength": 128 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "lastMessagePreview": { "type": "string", "maxLength": 240 },
+        "lastSenderUid": { "type": "string", "maxLength": 128 },
+        "unreadByUids": { "type": "array" },
+        "status": { "type": "string", "enum": ["active", "flagged", "locked", "archived"] },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationType", "participantUids", "participantSummary", "relatedType", "subject", "lastMessagePreview", "unreadByUids", "status", "createdByUid", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Server-validated internal message stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "participantUids": { "type": "array" },
+        "senderUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "senderRole": { "type": "string", "enum": ["parent", "tutor", "trainer", "organization", "admin"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "attachmentName": { "type": "string", "maxLength": 160 },
+        "attachmentType": { "type": "string", "maxLength": 80 },
+        "attachmentSizeBytes": { "type": "number" },
+        "attachmentScanStatus": { "type": "string", "enum": ["none", "clean", "flagged"] },
+        "moderationStatus": { "type": "string", "enum": ["approved", "flagged", "removed"] },
+        "moderationReason": { "type": "string", "maxLength": 300 },
+        "readByUids": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "participantUids", "senderUid", "senderName", "senderRole", "text", "attachmentScanStatus", "moderationStatus", "readByUids", "createdAt", "updatedAt"]
+    },
+    "MessageReport": {
+      "title": "MessageReport",
+      "description": "User-submitted report of contact sharing or inappropriate behavior.",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "messageId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reporterUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reporterName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "reportedUserUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "reason": { "type": "string", "enum": ["contact_sharing", "off_platform_solicitation", "harassment", "inappropriate_attachment", "other"] },
+        "details": { "type": "string", "minLength": 4, "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["open", "under_review", "resolved", "dismissed"] },
+        "adminNotes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversationId", "messageId", "reporterUid", "reporterName", "reportedUserUid", "reason", "details", "status", "createdAt", "updatedAt"]
+    },
+    "ModerationFlag": {
+      "title": "ModerationFlag",
+      "description": "Blocked or flagged message/attachment event for administrator investigation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "messageId": { "type": "string", "maxLength": 128 },
+        "attemptedText": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "violationType": { "type": "string", "enum": ["phone_number", "whatsapp", "email", "website_url", "social_media", "external_meeting", "split_contact", "suspicious_attachment", "obfuscated_contact", "uncertain_review"] },
+        "detectionResult": { "type": "string", "enum": ["blocked", "flagged_for_review", "approved_exception"] },
+        "matchedIndicators": { "type": "array" },
+        "enforcementAction": { "type": "string", "enum": ["warning", "flagged_only", "temp_restriction", "admin_review", "none"] },
+        "reviewStatus": { "type": "string", "enum": ["pending", "confirmed_violation", "false_positive", "exception_granted"] },
+        "reviewedByUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "conversationId", "attemptedText", "violationType", "detectionResult", "matchedIndicators", "enforcementAction", "reviewStatus", "createdAt", "updatedAt"]
+    },
+    "UserViolation": {
+      "title": "UserViolation",
+      "description": "Recorded contact-protection policy violation for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "conversationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "violationType": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "detectionResult": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "enforcementAction": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "details": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "conversationId", "violationType", "detectionResult", "enforcementAction", "details", "createdAt"]
+    },
+    "MessagingRestriction": {
+      "title": "MessagingRestriction",
+      "description": "User messaging restriction status, violation counter, and appeal state.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "violationCount": { "type": "number" },
+        "restrictionLevel": { "type": "string", "enum": ["none", "warning", "temp_restricted", "suspended_review"] },
+        "status": { "type": "string", "enum": ["none", "active", "lifted"] },
+        "reason": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "restrictedUntilIso": { "type": "string", "maxLength": 60 },
+        "appealStatus": { "type": "string", "enum": ["none", "pending", "approved", "rejected"] },
+        "appealText": { "type": "string", "maxLength": 1000 },
+        "adminDecisionNotes": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "violationCount", "restrictionLevel", "status", "reason", "appealStatus", "createdAt", "updatedAt"]
+    },
+    "ModerationAction": {
+      "title": "ModerationAction",
+      "description": "Administrator moderation action record.",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "targetUserId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "flagId": { "type": "string", "maxLength": 128 },
+        "actionType": { "type": "string", "enum": ["issue_warning", "restrict_messaging", "lift_restriction", "suspend_account", "approve_exception", "dismiss_flag", "resolve_appeal", "update_settings"] },
+        "notes": { "type": "string", "minLength": 2, "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminUid", "targetUserId", "actionType", "notes", "createdAt"]
+    },
+    "PlatformModerationSetting": {
+      "title": "PlatformModerationSetting",
+      "description": "Configurable blocked categories, enforcement thresholds, and approved exceptions.",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "blockPhoneNumbers": { "type": "boolean" },
+        "blockWhatsApp": { "type": "boolean" },
+        "blockEmails": { "type": "boolean" },
+        "blockUrls": { "type": "boolean" },
+        "blockSocialMedia": { "type": "boolean" },
+        "blockMeetingLinks": { "type": "boolean" },
+        "detectSplitMessages": { "type": "boolean" },
+        "scanAttachments": { "type": "boolean" },
+        "warningThreshold": { "type": "number" },
+        "tempRestrictionThreshold": { "type": "number" },
+        "suspensionReviewThreshold": { "type": "number" },
+        "tempRestrictionHours": { "type": "number" },
+        "approvedExceptions": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["key", "blockPhoneNumbers", "blockWhatsApp", "blockEmails", "blockUrls", "blockSocialMedia", "blockMeetingLinks", "detectSplitMessages", "scanAttachments", "warningThreshold", "tempRestrictionThreshold", "suspensionReviewThreshold", "tempRestrictionHours", "approvedExceptions", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Security and communication control audit log entry.",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorRole": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "eventType": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorUid", "actorRole", "eventType", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "#/entities/UserAccount" }, "description": "Private user profile and role store." },
+    "/admins/{adminId}": { "schema": { "$ref": "#/entities/AdminRecord" }, "description": "Trusted administrator registry." },
+    "/categories/{categoryId}": { "schema": { "$ref": "#/entities/Category" }, "description": "Admin-managed categories." },
+    "/tutors/{tutorId}": { "schema": { "$ref": "#/entities/TutorProfile" }, "description": "Publicly searchable tutor profiles once approved." },
+    "/tutor_documents/{docId}": { "schema": { "$ref": "#/entities/TutorDocument" }, "description": "Private verification credentials and national ID records." },
+    "/students/{studentId}": { "schema": { "$ref": "#/entities/StudentProfile" }, "description": "Private child/student profiles owned by parents." },
+    "/tutor_requests/{requestId}": { "schema": { "$ref": "#/entities/TutorRequest" }, "description": "Managed tutor matching requests." },
+    "/bookings/{bookingId}": { "schema": { "$ref": "#/entities/Booking" }, "description": "Tutoring session bookings." },
+    "/payments/{paymentId}": { "schema": { "$ref": "#/entities/PaymentRecord" }, "description": "Manual payment verification and commission records." },
+    "/progress_reports/{reportId}": { "schema": { "$ref": "#/entities/ProgressReport" }, "description": "Session attendance and learning progress reports." },
+    "/reviews/{reviewId}": { "schema": { "$ref": "#/entities/Review" }, "description": "Public ratings and reviews for tutors." },
+    "/support_tickets/{ticketId}": { "schema": { "$ref": "#/entities/SupportTicket" }, "description": "Customer support and safeguarding reports." },
+    "/admin_logs/{logId}": { "schema": { "$ref": "#/entities/AdminLog" }, "description": "Immutable admin audit log." },
+    "/platform_settings/{settingId}": { "schema": { "$ref": "#/entities/PlatformSetting" }, "description": "Platform-wide public settings." },
+    "/organizations/{orgId}": { "schema": { "$ref": "#/entities/Organization" }, "description": "Corporate/organizational client profiles." },
+    "/organization_users/{orgUserId}": { "schema": { "$ref": "#/entities/OrganizationUser" }, "description": "Organization user memberships." },
+    "/corporate_requests/{requestId}": { "schema": { "$ref": "#/entities/CorporateRequest" }, "description": "Corporate training requests." },
+    "/corporate_trainers/{trainerId}": { "schema": { "$ref": "#/entities/CorporateTrainer" }, "description": "Professional corporate trainer profiles." },
+    "/trainer_portfolio_items/{itemId}": { "schema": { "$ref": "#/entities/TrainerPortfolioItem" }, "description": "Trainer-uploaded portfolio deliverables subject to administrator approval." },
+    "/saved_trainers/{savedId}": { "schema": { "$ref": "#/entities/SavedTrainer" }, "description": "Organization bookmarks of preferred corporate trainers." },
+    "/trainer_selection_requests/{selectionId}": { "schema": { "$ref": "#/entities/TrainerSelectionRequest" }, "description": "Organization trainer selection and ranked shortlist requests managed by TutorBridge." },
+    "/corporate_negotiations/{negId}": { "schema": { "$ref": "#/entities/CorporateNegotiation" }, "description": "Role-isolated commercial negotiation log." },
+    "/training_proposals/{proposalId}": { "schema": { "$ref": "#/entities/TrainingProposal" }, "description": "Admin trainer proposals for corporate requests." },
+    "/training_quotations/{quotationId}": { "schema": { "$ref": "#/entities/TrainingQuotation" }, "description": "Itemized corporate training quotations." },
+    "/training_contracts/{contractId}": { "schema": { "$ref": "#/entities/TrainingContract" }, "description": "Approved corporate training agreements." },
+    "/trainer_assignment_agreements/{agreementId}": { "schema": { "$ref": "#/entities/TrainerAssignmentAgreement" }, "description": "Separate trainer assignment agreements strictly between TutorBridge and trainers." },
+    "/trainer_compensation_records/{recordId}": { "schema": { "$ref": "#/entities/TrainerCompensationRecord" }, "description": "Confidential trainer payout records." },
+    "/corporate_refunds/{refundId}": { "schema": { "$ref": "#/entities/CorporateRefundRecord" }, "description": "Corporate cancellation and refund settlement records." },
+    "/training_schedules/{scheduleId}": { "schema": { "$ref": "#/entities/TrainingSchedule" }, "description": "Corporate training delivery schedules." },
+    "/training_participants/{participantId}": { "schema": { "$ref": "#/entities/TrainingParticipant" }, "description": "Corporate training participant rosters." },
+    "/training_attendance/{attendanceId}": { "schema": { "$ref": "#/entities/TrainingAttendance" }, "description": "Corporate training attendance records." },
+    "/training_reports/{reportId}": { "schema": { "$ref": "#/entities/TrainingReport" }, "description": "Corporate training completion reports." },
+    "/corporate_invoices/{invoiceId}": { "schema": { "$ref": "#/entities/CorporateInvoice" }, "description": "Corporate invoices and payment tracking." },
+    "/corporate_feedback/{feedbackId}": { "schema": { "$ref": "#/entities/CorporateFeedback" }, "description": "Organization feedback on completed training." },
+    "/conversations/{conversationId}": { "schema": { "$ref": "#/entities/Conversation" }, "description": "Protected internal messaging threads." },
+    "/messages/{messageId}": { "schema": { "$ref": "#/entities/Message" }, "description": "Filtered internal messages." },
+    "/message_reports/{reportId}": { "schema": { "$ref": "#/entities/MessageReport" }, "description": "User-submitted message reports." },
+    "/moderation_flags/{flagId}": { "schema": { "$ref": "#/entities/ModerationFlag" }, "description": "Blocked/flagged contact-sharing attempts." },
+    "/user_violations/{violationId}": { "schema": { "$ref": "#/entities/UserViolation" }, "description": "User policy violation history." },
+    "/messaging_restrictions/{userId}": { "schema": { "$ref": "#/entities/MessagingRestriction" }, "description": "Per-user messaging restrictions and appeals." },
+    "/moderation_actions/{actionId}": { "schema": { "$ref": "#/entities/ModerationAction" }, "description": "Admin moderation actions." },
+    "/platform_moderation_settings/{settingId}": { "schema": { "$ref": "#/entities/PlatformModerationSetting" }, "description": "Contact protection thresholds and rules." },
+    "/audit_logs/{logId}": { "schema": { "$ref": "#/entities/AuditLog" }, "description": "Contact protection and messaging audit logs." }
+  }
+}

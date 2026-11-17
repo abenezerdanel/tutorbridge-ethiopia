@@ -1,0 +1,6 @@
+{
+  "name": "TutorBridge Ethiopia",
+  "description": "Verified in-person tutoring marketplace and corporate training coordination platform in Ethiopia. The Right Teacher. The Right Trainer. A Brighter Future.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
